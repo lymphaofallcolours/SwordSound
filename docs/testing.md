@@ -40,4 +40,4 @@ Every test follows AAA (Arrange-Act-Assert), one action per test, descriptive na
 
 | Factory | Location | Purpose |
 |---------|----------|---------|
-| (to be added as project develops) | | |
+| `createFakePersistence()` | `tests/fixtures/fake-persistence.ts` | In-memory PersistencePort for unit/integration tests |

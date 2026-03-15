@@ -5,31 +5,39 @@
 ## Current Session
 
 **Date:** 2026-03-15
-**Goal:** Implement domain and application layers with TDD
+**Goal:** Complete initial project setup — all layers implemented from domain to UI
 
 ### Completed This Session
-- Domain value objects: Volume, TimePosition, FadeDuration, Color (branded types with validation)
-- Domain models: CueLoop, TrackGroup, Track, Scene, Session (factory functions, immutable helpers)
-- Application ports: PersistencePort, AudioPlayerPort (infrastructure boundary interfaces)
-- Session use cases: create, save, load, delete, list, export/import
-- Scene use cases: add, remove, duplicate, update scenes; add, remove, update, copy, move tracks
-- Playback use case: panic (stop all)
-- Fake persistence fixture for testing
-- Feature plans archived to docs/plans/completed/
-- 92 tests passing across 13 test files
+- Domain value objects: Volume, TimePosition, FadeDuration, Color (branded types)
+- Domain models: CueLoop, TrackGroup, Track, Scene, Session (immutable factories)
+- Application ports: PersistencePort, AudioPlayerPort (infrastructure boundaries)
+- Application use cases: session CRUD, scene management, track CRUD, export/import, panic
+- Infrastructure: IPC persistence (main process file I/O), SoundCloud Widget adapter, preload API
+- Zustand stores: sessionStore (session/scene/track state), uiStore (sidebar/modals)
+- UI components: WelcomeScreen, SceneList, SceneHeader, TrackChannel, PanicButton, Modal, CreateSessionDialog, AddSceneDialog, AddTrackDialog
+- React hooks: useSessionStore, useUiStore (Zustand connectors)
+- Global styles: command-center theme, JetBrains Mono + DM Sans, scene accent color system
+- All feature plans archived
+- 109 tests passing across 17 test files
 
 ### In Progress
 - (none)
 
 ### Blocked / Needs Attention
-- Peer dependency warnings persist (cosmetic, not functional)
+- SoundCloud Widget adapter needs real-world testing with actual widget iframes
+- Peer dependency warnings (cosmetic): @electron/fuses v2 vs expected v1, @tailwindcss/vite expects vite ≤7
 
 ### Next Steps
-1. Implement infrastructure layer — file persistence via Electron IPC
-2. Implement SoundCloud Widget API adapter (infrastructure/soundcloud/)
-3. Build Zustand stores (ui/stores/) connecting application use cases to React
-4. Start UI implementation with frontend-design plugin — session/scene management views
-5. Implement keyboard shortcut infrastructure
+1. Wire SoundCloud Widget adapter to track playback (load iframes, play/pause/stop)
+2. Implement cue loop playback engine (the signature feature)
+3. Add keyboard shortcuts (panic, play/pause scene, break cue loop)
+4. Add scene crossfade and track fade in/out
+5. Implement one-shot sounds palette
+6. Add session auto-save
+7. Add undo/redo for configuration changes
+8. Add volume ducking for one-shots
+9. Add track groups (Music/Ambience/Effects layers)
+10. Add session log (optional timestamped playback log)
 
 ---
 
