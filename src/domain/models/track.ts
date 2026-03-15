@@ -28,6 +28,7 @@ export type Track = {
   readonly autoPlay: boolean;
   readonly alias: string;
   readonly fadeInOnPlay: boolean;
+  readonly fadeInDelay: number;
 };
 
 type CreateTrackInput = {
@@ -49,6 +50,7 @@ type CreateTrackInput = {
   autoPlay?: boolean;
   alias?: string;
   fadeInOnPlay?: boolean;
+  fadeInDelay?: number;
 };
 
 export function createTrack(input: CreateTrackInput): Track {
@@ -79,5 +81,6 @@ export function createTrack(input: CreateTrackInput): Track {
     autoPlay: input.autoPlay ?? false,
     alias: input.alias ?? '',
     fadeInOnPlay: input.fadeInOnPlay ?? false,
+    fadeInDelay: input.fadeInDelay ?? 0,
   };
 }

@@ -10,11 +10,14 @@ type SceneHeaderProps = {
   onFadeOut: () => void;
   onUpdateNotes?: (notes: string) => void;
   onDuckToggle?: () => void;
+  onSaveVolumes?: () => void;
+  onRestoreVolumes?: () => void;
   isDucked?: boolean;
   fadeDurationMs?: number;
+  hasVolumePresets?: boolean;
 };
 
-export function SceneHeader({ scene, onPlayScene, onStopScene, onFadeIn, onFadeOut, onUpdateNotes, onDuckToggle, isDucked, fadeDurationMs = 3000 }: SceneHeaderProps) {
+export function SceneHeader({ scene, onPlayScene, onStopScene, onFadeIn, onFadeOut, onUpdateNotes, onDuckToggle, onSaveVolumes, onRestoreVolumes, isDucked, fadeDurationMs = 3000, hasVolumePresets }: SceneHeaderProps) {
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState(scene.notes);
 
@@ -66,6 +69,15 @@ export function SceneHeader({ scene, onPlayScene, onStopScene, onFadeIn, onFadeO
               >
                 🎙
               </button>
+            </>
+          )}
+          {onSaveVolumes && (
+            <>
+              <div className="w-px h-5 bg-[var(--color-base-700)] mx-1" />
+              <TransportButton onClick={onSaveVolumes} title="Save current volume mix" icon="💾" />
+              {hasVolumePresets && onRestoreVolumes && (
+                <TransportButton onClick={onRestoreVolumes} title="Restore saved volume mix" icon="↩" />
+              )}
             </>
           )}
         </div>

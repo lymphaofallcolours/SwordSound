@@ -37,6 +37,8 @@ export function CueLoopEditor({ open, onClose, track, globalFadeDurationMs, onSa
   const [crossfadeDurationSec, setCrossfadeDurationSec] = useState(track.crossfadeDuration as number);
   const [autoPlay, setAutoPlay] = useState(track.autoPlay);
   const [fadeInOnPlay, setFadeInOnPlay] = useState(track.fadeInOnPlay ?? false);
+  const [groupId, setGroupId] = useState(track.groupId ?? '');
+  const [fadeInDelayMs, setFadeInDelayMs] = useState((track as Record<string, unknown>).fadeInDelay as number ?? 0);
   // Per-track fade-in duration override. 0 means "use global setting"
   const [fadeInDurationSec, setFadeInDurationSec] = useState(
     (track as Record<string, unknown>).fadeInDuration as number ?? 0,
@@ -113,6 +115,8 @@ export function CueLoopEditor({ open, onClose, track, globalFadeDurationMs, onSa
       autoPlay,
       fadeInOnPlay,
       fadeInDuration: fadeInDurationSec,
+      groupId: groupId || null,
+      fadeInDelay: fadeInDelayMs,
     });
     onClose();
   };
@@ -138,6 +142,36 @@ export function CueLoopEditor({ open, onClose, track, globalFadeDurationMs, onSa
             placeholder="e.g., Combat theme, Rain ambience"
             className="w-full px-2 py-1 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-xs text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
           />
+        </div>
+
+        {/* Group + Delay */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-[var(--color-base-400)]">Group:</span>
+            <select
+              value={groupId}
+              onChange={(e) => setGroupId(e.target.value)}
+              className="px-2 py-0.5 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-xs text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
+            >
+              <option value="">None</option>
+              <option value="music">Music</option>
+              <option value="ambience">Ambience</option>
+              <option value="effects">Effects</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-[var(--color-base-400)]">Start delay:</span>
+            <input
+              type="number"
+              min={0}
+              max={30}
+              step={0.5}
+              value={fadeInDelayMs / 1000}
+              onChange={(e) => setFadeInDelayMs(Number(e.target.value) * 1000)}
+              className="w-12 px-1 py-0.5 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-[10px] text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
+            />
+            <span className="text-[9px] text-[var(--color-base-600)]">sec</span>
+          </div>
         </div>
 
         {/* Playback options — checkboxes in a stable row, controls below */}

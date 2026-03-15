@@ -343,7 +343,12 @@ export function App() {
     if (!activeScene) return;
     for (const track of activeScene.tracks) {
       if (!track.muted) {
-        handlePlayTrack(track.id, track.soundcloudUrl);
+        const delay = (track as Record<string, unknown>).fadeInDelay as number ?? 0;
+        if (delay > 0) {
+          setTimeout(() => handlePlayTrack(track.id, track.soundcloudUrl), delay);
+        } else {
+          handlePlayTrack(track.id, track.soundcloudUrl);
+        }
       }
     }
   }, [activeScene, handlePlayTrack]);
@@ -661,6 +666,20 @@ export function App() {
                 onUpdateNotes={(notes) => updateScene(activeScene.id, { notes })}
                 onDuckToggle={handleDuckToggle}
                 isDucked={isDucked}
+                onSaveVolumes={() => {
+                  const presets: Record<string, number> = {};
+                  for (const t of activeScene.tracks) presets[t.id] = t.volume as number;
+                  updateScene(activeScene.id, { volumePresets: presets });
+                }}
+                onRestoreVolumes={() => {
+                  const presets = (activeScene as Record<string, unknown>).volumePresets as Record<string, number> | undefined;
+                  if (!presets) return;
+                  for (const [tid, vol] of Object.entries(presets)) {
+                    updateTrack(activeScene.id, tid, { volume: vol });
+                    setTrackVolume(tid, vol);
+                  }
+                }}
+                hasVolumePresets={Object.keys((activeScene as Record<string, unknown>).volumePresets as Record<string, number> ?? {}).length > 0}
               />
 
               <div className="flex-1 overflow-y-auto">

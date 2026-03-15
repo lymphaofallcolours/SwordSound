@@ -155,6 +155,9 @@ export function TrackChannel({
           {track.autoPlay && (
             <Badge color="green" text="auto" />
           )}
+          {track.groupId && (
+            <Badge color={track.groupId === 'music' ? 'purple' : track.groupId === 'ambience' ? 'cyan' : 'amber'} text={track.groupId} />
+          )}
         </div>
         <span className="text-[var(--color-base-500)] truncate block" style={{ fontSize: 'var(--text-xs)' }}>
           {displayArtist}
@@ -248,6 +251,9 @@ export function TrackChannel({
           max={100}
           value={track.muted ? 0 : track.volume}
           onChange={(e) => onVolumeChange(Number(e.target.value))}
+          onMouseDown={(e) => e.stopPropagation()}
+          onDragStart={(e) => e.stopPropagation()}
+          draggable={false}
           className="w-16 cursor-pointer"
           title={`Volume: ${track.volume}%`}
         />

@@ -13,6 +13,7 @@ export type Scene = {
   readonly tracks: readonly Track[];
   readonly groups: readonly TrackGroup[];
   readonly notes: string;
+  readonly volumePresets: Record<string, number>;
 };
 
 type CreateSceneInput = {
@@ -37,6 +38,7 @@ export function createScene(input: CreateSceneInput): Scene {
     tracks: [],
     groups: [],
     notes: input.notes ?? '',
+    volumePresets: {},
   };
 }
 

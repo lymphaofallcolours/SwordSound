@@ -86,6 +86,7 @@ type UpdateSceneInput = {
   emoji?: string | null;
   color?: string;
   notes?: string;
+  volumePresets?: Record<string, number>;
 };
 
 export function updateScene(
@@ -103,6 +104,7 @@ export function updateScene(
     ...(changes.emoji !== undefined && { emoji: changes.emoji }),
     ...(changes.color !== undefined && { color: createColor(changes.color) }),
     ...(changes.notes !== undefined && { notes: changes.notes }),
+    ...(changes.volumePresets !== undefined && { volumePresets: changes.volumePresets }),
   };
 
   const scenes = [...session.scenes];
@@ -120,7 +122,7 @@ export function removeTrack(session: Session, sceneId: string, trackId: string):
 }
 
 type UpdateTrackInput = Partial<
-  Pick<Track, 'volume' | 'muted' | 'loopEnabled' | 'crossfadeLoop' | 'crossfadeDuration' | 'customStart' | 'customEnd' | 'isOneShot' | 'autoPlay' | 'groupId' | 'alias'>
+  Pick<Track, 'volume' | 'muted' | 'loopEnabled' | 'crossfadeLoop' | 'crossfadeDuration' | 'customStart' | 'customEnd' | 'isOneShot' | 'autoPlay' | 'groupId' | 'alias' | 'fadeInOnPlay' | 'fadeInDelay'>
 >;
 
 export function updateTrack(
