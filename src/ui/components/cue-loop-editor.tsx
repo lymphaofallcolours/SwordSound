@@ -5,6 +5,7 @@ import type { Track } from '@domain/models/track';
 import type { CueLoop } from '@domain/models/cue-loop';
 import { createCueLoop } from '@domain/models/cue-loop';
 import { createTimePosition } from '@domain/value-objects/time-position';
+import { createFadeDuration } from '@domain/value-objects/fade-duration';
 
 type CueLoopEditorProps = {
   open: boolean;
@@ -41,15 +42,17 @@ export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorPro
   const [customEndStr, setCustomEndStr] = useState(
     track.customEnd ? formatTime(track.customEnd) : '',
   );
-  const [loops, setLoops] = useState<{ startStr: string; endStr: string }[]>(
+  const [loops, setLoops] = useState<{ startStr: string; endStr: string; xfade: boolean; xfadeSec: number }[]>(
     track.cueLoops.map((cl) => ({
       startStr: formatTime(cl.startPosition),
       endStr: formatTime(cl.endPosition),
+      xfade: cl.crossfadeEnabled,
+      xfadeSec: Number(cl.crossfadeDuration) || 0,
     })),
   );
 
   const addLoop = () => {
-    setLoops([...loops, { startStr: '0:00', endStr: '0:30' }]);
+    setLoops([...loops, { startStr: '0:00', endStr: '0:30', xfade: false, xfadeSec: 1 }]);
   };
 
   const removeLoop = (index: number) => {
@@ -74,6 +77,8 @@ export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorPro
           createCueLoop({
             startPosition: createTimePosition(startMs),
             endPosition: createTimePosition(endMs),
+            crossfadeEnabled: loop.xfade,
+            crossfadeDuration: loop.xfade ? createFadeDuration(loop.xfadeSec) : undefined,
           }),
         );
       } catch {
@@ -137,7 +142,7 @@ export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorPro
           <label className="flex items-center gap-1.5 text-xs text-[var(--color-base-300)] cursor-pointer">
             <input type="checkbox" checked={fadeInOnPlay} onChange={(e) => setFadeInOnPlay(e.target.checked)}
               className="accent-[var(--color-accent)]" />
-            Fade in on first play
+            Fade in on first play {crossfadeDurationSec > 0 ? `(${crossfadeDurationSec}s)` : '(2s)'}
           </label>
           <label className="flex items-center gap-1.5 text-xs text-[var(--color-base-300)] cursor-pointer">
             <input type="checkbox" checked={crossfadeLoop} onChange={(e) => setCrossfadeLoop(e.target.checked)}
@@ -232,6 +237,39 @@ export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorPro
                 >
                   ×
                 </button>
+              </div>
+              <div className="flex items-center gap-2 ml-8 mt-1">
+                <label className="flex items-center gap-1 text-[10px] text-[var(--color-base-400)] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={loop.xfade}
+                    onChange={(e) => {
+                      const updated = [...loops];
+                      updated[index] = { ...updated[index], xfade: e.target.checked };
+                      setLoops(updated);
+                    }}
+                    className="accent-[var(--color-accent)]"
+                  />
+                  Crossfade
+                </label>
+                {loop.xfade && (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={0.5}
+                      max={10}
+                      step={0.5}
+                      value={loop.xfadeSec}
+                      onChange={(e) => {
+                        const updated = [...loops];
+                        updated[index] = { ...updated[index], xfadeSec: Number(e.target.value) };
+                        setLoops(updated);
+                      }}
+                      className="w-12 px-1 py-0.5 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-[10px] text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
+                    />
+                    <span className="text-[9px] text-[var(--color-base-500)]">sec</span>
+                  </div>
+                )}
               </div>
               {outsideRange && (
                 <p className="text-[10px] text-amber-400 ml-8 mt-0.5">Outside custom start/end range</p>
