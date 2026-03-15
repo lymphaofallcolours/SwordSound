@@ -5,36 +5,39 @@
 ## Current Session
 
 **Date:** 2026-03-15
-**Goal:** Bootstrap SwordSound project — directory structure, documentation, dependencies, Electron shell, smoke tests, GitHub repo
+**Goal:** Implement domain and application layers with TDD
 
 ### Completed This Session
-- Renamed directory from RPG-soundboard to SwordSound
-- Adapted all documentation templates from Claude-fu/typescript-fu
-- Created CLAUDE.md with full project config
-- Moved Spec.md to docs/spec.md
-- Initialized pnpm project with all dependencies
-- Configured Electron Forge + Vite + React + Tailwind CSS v4
-- Set up TypeScript with path aliases, Vitest, ESLint, Prettier
-- Scaffolded Electron main process (BrowserWindow, preload)
-- Created React renderer with dark-themed placeholder UI
-- Added 2 passing smoke tests for App component
-- Created GitHub repo (lymphaofallcolours/SwordSound, public) and pushed
-- Saved persistent memories for future sessions
+- Domain value objects: Volume, TimePosition, FadeDuration, Color (branded types with validation)
+- Domain models: CueLoop, TrackGroup, Track, Scene, Session (factory functions, immutable helpers)
+- Application ports: PersistencePort, AudioPlayerPort (infrastructure boundary interfaces)
+- Session use cases: create, save, load, delete, list, export/import
+- Scene use cases: add, remove, duplicate, update scenes; add, remove, update, copy, move tracks
+- Playback use case: panic (stop all)
+- Fake persistence fixture for testing
+- Feature plans archived to docs/plans/completed/
+- 92 tests passing across 13 test files
 
 ### In Progress
 - (none)
 
 ### Blocked / Needs Attention
-- Peer dependency warnings: @electron/fuses v2 vs expected v1 by plugin-fuses, @tailwindcss/vite expects vite ≤7 but we have v8. Both work fine, just warnings.
+- Peer dependency warnings persist (cosmetic, not functional)
 
 ### Next Steps
-1. Implement domain models (Session, Scene, Track, CueLoop, TrackGroup) with TDD
-2. Implement value objects (Volume, TimePosition, FadeDuration, Color)
-3. Define application ports (PersistencePort, AudioPlayerPort)
-4. Build session persistence (save/load via IPC)
-5. Start UI implementation with frontend-design plugin
+1. Implement infrastructure layer — file persistence via Electron IPC
+2. Implement SoundCloud Widget API adapter (infrastructure/soundcloud/)
+3. Build Zustand stores (ui/stores/) connecting application use cases to React
+4. Start UI implementation with frontend-design plugin — session/scene management views
+5. Implement keyboard shortcut infrastructure
 
 ---
 
 ## Previous Sessions
-<!-- Move current session here when starting a new one. Keep last 5-10. -->
+
+### 2026-03-15 — Project Bootstrap
+- Renamed directory RPG-soundboard → SwordSound
+- Adapted all doc templates, created CLAUDE.md
+- Initialized pnpm + Electron Forge + React + Tailwind CSS v4 + Vitest
+- Scaffolded Electron app shell, 2 smoke tests
+- Created GitHub repo (lymphaofallcolours/SwordSound), pushed
