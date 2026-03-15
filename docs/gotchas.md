@@ -17,7 +17,14 @@
 ## Categories
 
 ### Environment / Setup
-<!-- Version conflicts, installation quirks, OS-specific issues -->
+
+- **Electron Forge requires `node-linker=hoisted` with pnpm**
+  **Context:** Forge's native dependency rebuilding and module resolution expect a flat `node_modules`. Without `.npmrc` setting `node-linker=hoisted`, `electron-forge start` fails with unhelpful errors.
+  **Fix:** Add `node-linker=hoisted` to `.npmrc` in project root.
+
+- **Electron must be in `devDependencies`, not `dependencies`**
+  **Context:** `@electron-forge/core-utils` scans `devDependencies` to find the Electron package for version detection. If Electron is in `dependencies`, Forge errors with "Could not find any Electron packages in devDependencies".
+  **Fix:** Always `pnpm add -D electron`.
 
 ### Language / Runtime
 <!-- Surprising behavior, footguns in the primary language -->

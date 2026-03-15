@@ -48,4 +48,13 @@
 **Consequences:** Tailwind config in `tailwind.config.ts`. Custom theme with scene accent color system. `@tailwindcss/vite` plugin in Vite config.
 
 ---
+
+## 2026-03-15 — pnpm hoisted node-linker for Electron Forge
+**Status:** Accepted
+**Context:** Electron Forge requires flat `node_modules` for native dependency rebuilding. pnpm's default symlinked layout breaks this.
+**Decision:** Add `node-linker=hoisted` to `.npmrc`. Electron stays in `devDependencies` (Forge requirement).
+**Alternatives rejected:** Switching to npm (loses pnpm benefits); using `shamefully-hoist` (deprecated).
+**Consequences:** `.npmrc` must be committed. `node_modules` layout is flat, losing some pnpm strictness.
+
+---
 <!-- Entries above — newest first -->
