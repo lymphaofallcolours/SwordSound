@@ -227,20 +227,23 @@ export function App() {
   }, [isDucked, tracks, player]);
 
   const handleAddTrack = useCallback(
-    async (url: string) => {
+    async (options: { url: string; alias?: string; groupId?: string; loopEnabled?: boolean; autoPlay?: boolean; fadeInOnPlay?: boolean }) => {
       if (!activeSceneId) return;
 
-      // Create a track with placeholder metadata first
       const track = createTrack({
-        soundcloudUrl: url,
+        soundcloudUrl: options.url,
         title: 'Loading...',
         artist: 'Loading...',
         duration: 1,
+        alias: options.alias || '',
+        groupId: options.groupId || null,
+        loopEnabled: options.loopEnabled ?? false,
+        autoPlay: options.autoPlay ?? false,
+        fadeInOnPlay: options.fadeInOnPlay ?? false,
       });
       addTrack(activeSceneId, track);
 
-      // Load the widget and get real metadata
-      const metadata = await loadTrackToPlayer(track.id, url);
+      const metadata = await loadTrackToPlayer(track.id, options.url);
       if (metadata) {
         updateTrack(activeSceneId, track.id, {
           title: metadata.title,
@@ -782,7 +785,7 @@ export function App() {
       <AddTrackDialog
         open={showAddOneShot}
         onClose={() => setShowAddOneShot(false)}
-        onConfirm={handleAddOneShot}
+        onConfirm={(opts) => handleAddOneShot(opts.url)}
       />
       {editingCueLoopsTrackId && activeScene && (() => {
         const track = activeScene.tracks.find((t) => t.id === editingCueLoopsTrackId);
