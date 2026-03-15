@@ -5,45 +5,45 @@
 ## Current Session
 
 **Date:** 2026-03-15
-**Goal:** Build SwordSound from scratch — all layers through live playback
+**Goal:** Build SwordSound from scratch through live-play-ready state
 
 ### Completed This Session
-- Full project bootstrap (Electron + React + TypeScript + Tailwind)
-- Domain layer: 4 value objects, 5 entity models
-- Application layer: ports, session/scene/track use cases, export/import
+- Full project bootstrap (Electron 28 + React 19 + TypeScript + Tailwind v4)
+- Domain layer: 4 branded value objects, 5 entity models with immutable helpers
+- Application layer: 2 ports, session/scene/track use cases, export/import
 - Infrastructure: IPC persistence, SoundCloud Widget API adapter, fade engine
-- Zustand stores: session, playback, UI state
-- UI: welcome screen, scene list, track channels, panic button, modals
+- Zustand stores: session, playback, UI, settings
 - Live SoundCloud playback with multi-track simultaneous audio
 - Loop mode (auto-restart on finish)
-- Scene crossfade (fade out current → fade in next)
-- Track fade in/out (3s gradual volume transitions)
+- Scene crossfade (configurable duration via settings)
+- Track fade in/out (configurable duration via settings)
 - GM notes editing (inline in scene header)
-- Scene duplicate/delete via right-click context menu
-- Session persistence (auto-save every 30s, survives restarts)
-- Session export as .swordsound.json file
-- Keyboard shortcuts: Space (toggle scene play/pause), Escape (panic)
-- Back-to-home navigation (SwordSound logo)
-- Professional dark palette (black base, aeroglass panels)
+- Scene management: duplicate/delete via right-click context menu
+- Session persistence (auto-save 30s, survives restarts)
+- Session export/import via native file dialogs + IPC file I/O
+- One-shot sounds palette (persistent, accessible from any scene)
+- Settings panel: UI scale (Compact/Default/Large), fade/crossfade durations
+- Keyboard shortcuts: Space (scene play/pause), Escape (panic)
+- Back-to-home navigation
+- Professional dark palette (black base, configurable icon sizes)
 - 109 tests across 17 files, all passing
-- 15 commits pushed to GitHub
+- 20 commits pushed to GitHub
 
 ### In Progress
 - (none)
 
 ### Blocked / Needs Attention
-- Peer dependency warnings (cosmetic, non-functional)
+- (none)
 
 ### Next Steps
-1. Cue loops — the signature feature (define loop regions, break with button)
+1. Cue loops — the signature feature
 2. Custom start/end points on tracks
-3. One-shot sounds palette
-4. Track groups (Music/Ambience/Effects layers)
-5. Volume ducking for one-shots
-6. Undo/redo
-7. Session import from file
-8. Drag-and-drop track/scene reordering
-9. Session log (timestamped playback events)
+3. Volume ducking for one-shots
+4. Undo/redo
+5. Drag-and-drop track/scene reordering
+6. Session log (timestamped playback events)
+7. Track groups with group volume/mute
+8. SoundCloud attribution panel (ToS compliance)
 
 ---
 
