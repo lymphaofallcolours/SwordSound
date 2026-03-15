@@ -140,52 +140,61 @@ export function CueLoopEditor({ open, onClose, track, globalFadeDurationMs, onSa
           />
         </div>
 
-        {/* Playback options */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <label className="flex items-center gap-1.5 text-xs text-[var(--color-base-300)] cursor-pointer">
-            <input type="checkbox" checked={autoPlay} onChange={(e) => setAutoPlay(e.target.checked)}
-              className="accent-[var(--color-accent)]" />
-            Auto-play on scene switch
-          </label>
-          <label className="flex items-center gap-1.5 text-xs text-[var(--color-base-300)] cursor-pointer">
-            <input type="checkbox" checked={fadeInOnPlay} onChange={(e) => setFadeInOnPlay(e.target.checked)}
-              className="accent-[var(--color-accent)]" />
-            Fade in on play
-          </label>
-          {fadeInOnPlay && (
-            <div className="flex items-center gap-1">
-              <input
-                type="number"
-                min={0}
-                max={10}
-                step={0.5}
-                value={fadeInDurationSec}
-                onChange={(e) => setFadeInDurationSec(Number(e.target.value))}
-                className="w-14 px-1 py-0.5 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-xs text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
-                placeholder={String(globalFadeSec)}
-              />
-              <span className="text-[10px] text-[var(--color-base-500)]">
-                {fadeInDurationSec > 0 ? 'sec' : `sec (global: ${globalFadeSec}s)`}
-              </span>
-            </div>
-          )}
-          <label className="flex items-center gap-1.5 text-xs text-[var(--color-base-300)] cursor-pointer">
-            <input type="checkbox" checked={crossfadeLoop} onChange={(e) => setCrossfadeLoop(e.target.checked)}
-              className="accent-[var(--color-accent)]" />
-            Crossfade loop
-          </label>
-          {crossfadeLoop && (
-            <div className="flex items-center gap-1">
-              <input
-                type="number"
-                min={0.5}
-                max={10}
-                step={0.5}
-                value={crossfadeDurationSec}
-                onChange={(e) => setCrossfadeDurationSec(Number(e.target.value))}
-                className="w-14 px-1 py-0.5 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-xs text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
-              />
-              <span className="text-[10px] text-[var(--color-base-500)]">sec</span>
+        {/* Playback options — checkboxes in a stable row, controls below */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-1.5 text-xs text-[var(--color-base-300)] cursor-pointer">
+              <input type="checkbox" checked={autoPlay} onChange={(e) => setAutoPlay(e.target.checked)}
+                className="accent-[var(--color-accent)]" />
+              Auto-play
+            </label>
+            <label className="flex items-center gap-1.5 text-xs text-[var(--color-base-300)] cursor-pointer">
+              <input type="checkbox" checked={fadeInOnPlay} onChange={(e) => setFadeInOnPlay(e.target.checked)}
+                className="accent-[var(--color-accent)]" />
+              Fade in
+            </label>
+            <label className="flex items-center gap-1.5 text-xs text-[var(--color-base-300)] cursor-pointer">
+              <input type="checkbox" checked={crossfadeLoop} onChange={(e) => setCrossfadeLoop(e.target.checked)}
+                className="accent-[var(--color-accent)]" />
+              Crossfade loop
+            </label>
+          </div>
+          {/* Conditional duration controls */}
+          {(fadeInOnPlay || crossfadeLoop) && (
+            <div className="flex items-center gap-4 ml-4">
+              {fadeInOnPlay && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-[var(--color-base-500)]">Fade in:</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={10}
+                    step={0.5}
+                    value={fadeInDurationSec}
+                    onChange={(e) => setFadeInDurationSec(Number(e.target.value))}
+                    className="w-12 px-1 py-0.5 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-[10px] text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
+                    placeholder={String(globalFadeSec)}
+                  />
+                  <span className="text-[9px] text-[var(--color-base-600)]">
+                    {fadeInDurationSec > 0 ? 's' : `s (=${globalFadeSec}s)`}
+                  </span>
+                </div>
+              )}
+              {crossfadeLoop && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-[var(--color-base-500)]">Crossfade:</span>
+                  <input
+                    type="number"
+                    min={0.5}
+                    max={10}
+                    step={0.5}
+                    value={crossfadeDurationSec}
+                    onChange={(e) => setCrossfadeDurationSec(Number(e.target.value))}
+                    className="w-12 px-1 py-0.5 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-[10px] text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
+                  />
+                  <span className="text-[9px] text-[var(--color-base-600)]">s</span>
+                </div>
+              )}
             </div>
           )}
         </div>
