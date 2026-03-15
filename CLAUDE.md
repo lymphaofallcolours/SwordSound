@@ -97,6 +97,17 @@ Claude is a self-directed developer. All behaviors below happen WITHOUT being as
 - Update relevant docs IN THE SAME COMMIT as code. Docs are part of the work, not a separate task.
 - Conventional commits: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`.
 
+### Versioning (Semantic Versioning)
+- **Format:** `MAJOR.MINOR.PATCH` (e.g., `0.2.0`)
+- **PATCH** (`fix:` commits): bug fixes, polish, no new features
+- **MINOR** (`feat:` commits): new features, non-breaking changes
+- **MAJOR**: breaking changes to session format, API, or user-facing behavior
+- **When to bump:** At the end of a feature batch or bug fix session, NOT every commit
+- **Where to bump:** `package.json` version field
+- **Changelog:** Update `CHANGELOG.md` with grouped changes under the new version heading
+- **Git tag:** Create annotated tag: `git tag -a v0.2.0 -m "v0.2.0"` and push: `git push --tags`
+- **Pre-1.0:** We're in `0.x` — minor bumps for features, patch for fixes. `1.0.0` after thorough testing and user validation.
+
 ### Session End
 - Update `docs/wip.md`: completed, in-progress, blocked, next steps.
 - Log TODO/FIXME in `docs/wip.md` with file path. Self-check for stale docs.
@@ -123,6 +134,6 @@ docs/
 ├── wip.md               # Session state — updated EVERY session
 ├── decisions-log.md     # ADRs — append-only
 ├── dependencies.md      # Why each dep exists
-├── changelog.md         # Via conventional commits
+CHANGELOG.md             # Root-level, semantic versioning (not in docs/)
 └── plans/               # Feature plans (active) → plans/completed/ (archived)
 ```
