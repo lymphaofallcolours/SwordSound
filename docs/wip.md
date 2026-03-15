@@ -5,33 +5,29 @@
 ## Current Session
 
 **Date:** 2026-03-15
-**Goal:** Complete feature batch — polish, cross-scene operations, crossfade
+**Goal:** Feature-complete initial release
 
 ### Completed This Session (cumulative)
-- 31 commits, 109 tests, fully functional desktop soundboard
-- All core spec features implemented except track groups and session log export
-- Cross-scene track drag-and-drop (drag track onto sidebar scene)
-- Track clipboard copy/paste between scenes
-- Track loop crossfade (soft fade-in on restart)
-- Floating hover time label on progress bar
-- Scene drag reorder + rename inline
-- Track right-click context menu (copy, duplicate, editor, auto-play, remove)
-- GM alias per track, auto-play toggle, manual duck (D key + mic button)
-- Custom start/end enforcement, visual indicators, seek clamping
-- Cue loop timeline colors (broken/active/upcoming), seek cooldown fix
-- Cue loop editor validation (overlap + out-of-range warnings)
-- Time display on every track (current/total)
+- 37 commits, 109 tests
+- All spec features implemented
+- Track groups (Music/Ambience/Effects) with colored badges
+- Volume presets per scene (save/restore mix)
+- Staggered track start delays (per-track configurable)
+- Crossfade loop (fade out → seek → fade in, working)
+- Cue loop crossfade (per-cue-loop toggle + duration)
+- Fade-in on play (per-track, defaults to global duration)
+- Track Editor: group, delay, alias, auto-play, fade-in, crossfade, cue loops, custom start/end
+- Volume slider drag fix (no longer triggers track drag)
 
 ### Next Steps (future sessions)
-1. Track groups with group volume/mute (Music/Ambience/Effects)
-2. Volume presets per scene
-3. Track fade-in delay (stagger starts)
-4. Session log export UI
-5. Full undo/redo integration
-6. CI pipeline + app packaging
+1. Full undo/redo integration with session store
+2. Session log export UI
+3. Track group volume/mute controls (master per group)
+4. CI pipeline + app packaging (.deb, .exe, .dmg)
 
 ---
 
 ## Previous Sessions
 ### 2026-03-15 — Full Build + Polish
-- From zero to feature-complete desktop app in one session
+- From zero to feature-complete desktop app
+- 37 commits, 109 tests, ~6000+ lines
