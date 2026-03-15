@@ -6,4 +6,6 @@ export const IPC_CHANNELS = {
   GET_SESSIONS_DIR: 'session:get-dir',
   SHOW_SAVE_DIALOG: 'dialog:save',
   SHOW_OPEN_DIALOG: 'dialog:open',
+  READ_FILE: 'file:read',
+  WRITE_FILE: 'file:write',
 } as const;

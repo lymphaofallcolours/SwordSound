@@ -83,4 +83,16 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
     });
     return result.canceled ? null : result.filePaths[0];
   });
+
+  ipcMain.handle(IPC_CHANNELS.READ_FILE, async (_event, filePath: string) => {
+    try {
+      return await fs.readFile(filePath, 'utf-8');
+    } catch {
+      return null;
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.WRITE_FILE, async (_event, filePath: string, content: string) => {
+    await fs.writeFile(filePath, content, 'utf-8');
+  });
 }

@@ -15,6 +15,10 @@ const api: PreloadApi = {
     showSave: (defaultName) => ipcRenderer.invoke(IPC_CHANNELS.SHOW_SAVE_DIALOG, defaultName),
     showOpen: () => ipcRenderer.invoke(IPC_CHANNELS.SHOW_OPEN_DIALOG),
   },
+  file: {
+    read: (path) => ipcRenderer.invoke(IPC_CHANNELS.READ_FILE, path),
+    write: (path, content) => ipcRenderer.invoke(IPC_CHANNELS.WRITE_FILE, path, content),
+  },
 };
 
 contextBridge.exposeInMainWorld('swordsound', api);

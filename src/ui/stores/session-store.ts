@@ -47,13 +47,29 @@ export type SessionState = {
   removeOneShotTrack: (trackId: string) => void;
 };
 
+const ONESHOTS_KEY = 'swordsound-oneshots';
+
+function loadOneShotsFromStorage(): Track[] {
+  try {
+    const raw = localStorage.getItem(ONESHOTS_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return [];
+}
+
+function saveOneShotsToStorage(tracks: Track[]): void {
+  try {
+    localStorage.setItem(ONESHOTS_KEY, JSON.stringify(tracks));
+  } catch { /* ignore */ }
+}
+
 export function createSessionStore(persistence: PersistencePort) {
   return createStore<SessionState>((set, get) => ({
     currentSession: null,
     sessionList: [],
     isLoading: false,
     activeSceneId: null,
-    oneShotTracks: [],
+    oneShotTracks: loadOneShotsFromStorage(),
 
     createSession: async (name: string) => {
       set({ isLoading: true });
@@ -150,11 +166,19 @@ export function createSessionStore(persistence: PersistencePort) {
     },
 
     addOneShotTrack: (track: Track) => {
-      set((prev) => ({ oneShotTracks: [...prev.oneShotTracks, track] }));
+      set((prev) => {
+        const updated = [...prev.oneShotTracks, track];
+        saveOneShotsToStorage(updated);
+        return { oneShotTracks: updated };
+      });
     },
 
     removeOneShotTrack: (trackId: string) => {
-      set((prev) => ({ oneShotTracks: prev.oneShotTracks.filter((t) => t.id !== trackId) }));
+      set((prev) => {
+        const updated = prev.oneShotTracks.filter((t) => t.id !== trackId);
+        saveOneShotsToStorage(updated);
+        return { oneShotTracks: updated };
+      });
     },
   }));
 }

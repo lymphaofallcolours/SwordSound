@@ -13,6 +13,10 @@ export type PreloadApi = {
     showSave(defaultName: string): Promise<string | null>;
     showOpen(): Promise<string | null>;
   };
+  file: {
+    read(path: string): Promise<string | null>;
+    write(path: string, content: string): Promise<void>;
+  };
 };
 
 declare global {
