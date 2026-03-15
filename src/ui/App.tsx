@@ -20,6 +20,7 @@ export function App() {
   const refreshSessionList = useSessionStore((s) => s.refreshSessionList);
   const addScene = useSessionStore((s) => s.addScene);
   const removeScene = useSessionStore((s) => s.removeScene);
+  const duplicateScene = useSessionStore((s) => s.duplicateScene);
   const setActiveScene = useSessionStore((s) => s.setActiveScene);
   const addTrack = useSessionStore((s) => s.addTrack);
   const removeTrack = useSessionStore((s) => s.removeTrack);
@@ -211,6 +212,41 @@ export function App() {
     }
   }, [activeScene, fadeOutTrack]);
 
+  const handleCrossfadeToScene = useCallback(
+    (targetSceneId: string) => {
+      if (targetSceneId === activeSceneId) return;
+
+      // Fade out current scene
+      if (activeScene) {
+        for (const track of activeScene.tracks) {
+          if (tracks[track.id]?.state === 'playing') {
+            fadeOutTrack(track.id, 2000, true);
+          }
+        }
+      }
+
+      // Switch and fade in target scene
+      setActiveScene(targetSceneId);
+      const targetScene = currentSession?.scenes.find((s) => s.id === targetSceneId);
+      if (targetScene) {
+        setTimeout(() => {
+          for (const track of targetScene.tracks) {
+            if (!track.muted && track.autoPlay) {
+              if (!tracks[track.id] || tracks[track.id].state === 'error') {
+                loadTrackToPlayer(track.id, track.soundcloudUrl).then(() => {
+                  fadeInTrack(track.id, track.volume, 2000);
+                });
+              } else {
+                fadeInTrack(track.id, track.volume, 2000);
+              }
+            }
+          }
+        }, 200);
+      }
+    },
+    [activeSceneId, activeScene, currentSession, tracks, fadeOutTrack, fadeInTrack, loadTrackToPlayer, setActiveScene],
+  );
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -284,8 +320,10 @@ export function App() {
           <SceneList
             scenes={currentSession.scenes}
             activeSceneId={activeSceneId}
-            onSelectScene={setActiveScene}
+            onSelectScene={handleCrossfadeToScene}
             onAddScene={() => setShowAddScene(true)}
+            onDuplicateScene={duplicateScene}
+            onDeleteScene={removeScene}
           />
         </aside>
 
