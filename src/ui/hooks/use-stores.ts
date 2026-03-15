@@ -1,18 +1,18 @@
-import { useMemo } from 'react';
 import { useStore } from 'zustand';
 
 import { createSessionStore, type SessionState } from '@ui/stores/session-store';
 import { createUiStore, type UiState } from '@ui/stores/ui-store';
+import { createPlaybackStore, type PlaybackState } from '@ui/stores/playback-store';
 import { createFakePersistence } from '../../../tests/fixtures/fake-persistence';
 import type { PersistencePort } from '@application/ports/persistence-port';
 
 // Singleton stores — initialized once
 let sessionStoreInstance: ReturnType<typeof createSessionStore> | null = null;
 let uiStoreInstance: ReturnType<typeof createUiStore> | null = null;
+let playbackStoreInstance: ReturnType<typeof createPlaybackStore> | null = null;
 
 function getSessionStore(persistence?: PersistencePort) {
   if (!sessionStoreInstance) {
-    // Use IPC persistence in Electron, fake for development/testing
     const port = persistence ?? (
       typeof window !== 'undefined' && window.swordsound?.sessions
         ? {
@@ -35,10 +35,21 @@ function getUiStore() {
   return uiStoreInstance;
 }
 
+function getPlaybackStore() {
+  if (!playbackStoreInstance) {
+    playbackStoreInstance = createPlaybackStore();
+  }
+  return playbackStoreInstance;
+}
+
 export function useSessionStore<T>(selector: (state: SessionState) => T): T {
   return useStore(getSessionStore(), selector);
 }
 
 export function useUiStore<T>(selector: (state: UiState) => T): T {
   return useStore(getUiStore(), selector);
+}
+
+export function usePlaybackStore<T>(selector: (state: PlaybackState) => T): T {
+  return useStore(getPlaybackStore(), selector);
 }

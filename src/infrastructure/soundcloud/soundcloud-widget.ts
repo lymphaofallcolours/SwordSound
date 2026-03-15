@@ -1,209 +1,187 @@
-import type { AudioPlayerPort, TrackPlaybackState } from '@application/ports/audio-player-port';
-import type { Volume } from '@domain/value-objects/volume';
-import type { TimePosition } from '@domain/value-objects/time-position';
-import { createTimePosition } from '@domain/value-objects/time-position';
+import type { SCWidget, SCSound, SCProgressData } from './sc-types';
 
-type WidgetInstance = {
-  iframe: HTMLIFrameElement;
-  state: TrackPlaybackState;
-  position: TimePosition;
-  cleanups: (() => void)[];
+export type TrackPlaybackState = 'loading' | 'ready' | 'playing' | 'paused' | 'stopped' | 'error';
+
+export type TrackMetadata = {
+  title: string;
+  artist: string;
+  duration: number;
+  artworkUrl: string | null;
+  permalinkUrl: string;
 };
 
-const SC_WIDGET_API_URL = 'https://w.soundcloud.com/player/';
+export type PlaybackCallbacks = {
+  onStateChange?: (trackId: string, state: TrackPlaybackState) => void;
+  onProgress?: (trackId: string, positionMs: number, relativePosition: number) => void;
+  onFinish?: (trackId: string) => void;
+  onMetadataLoaded?: (trackId: string, metadata: TrackMetadata) => void;
+  onError?: (trackId: string) => void;
+};
 
-function buildWidgetUrl(soundcloudUrl: string): string {
-  const params = new URLSearchParams({
-    url: soundcloudUrl,
-    auto_play: 'false',
-    show_artwork: 'true',
-    show_user: 'true',
-    visual: 'false',
-  });
-  return `${SC_WIDGET_API_URL}?${params.toString()}`;
+type WidgetEntry = {
+  iframe: HTMLIFrameElement;
+  widget: SCWidget;
+  state: TrackPlaybackState;
+  trackId: string;
+};
+
+function getWidgetContainer(): HTMLElement {
+  const el = document.getElementById('sc-widgets');
+  if (!el) throw new Error('SoundCloud widget container #sc-widgets not found');
+  return el;
 }
 
-export function createSoundCloudAdapter(container: HTMLElement): AudioPlayerPort {
-  const widgets = new Map<string, WidgetInstance>();
+function getSCWidget(): typeof window.SC {
+  return window.SC;
+}
 
-  function getWidget(trackId: string): WidgetInstance {
-    const widget = widgets.get(trackId);
-    if (!widget) throw new Error(`Widget not loaded for track ${trackId}`);
-    return widget;
+function buildIframeSrc(soundcloudUrl: string): string {
+  const encodedUrl = encodeURIComponent(soundcloudUrl);
+  return `https://w.soundcloud.com/player/?url=${encodedUrl}&auto_play=false&show_artwork=false&visual=false`;
+}
+
+export function createSoundCloudPlayer(callbacks: PlaybackCallbacks = {}) {
+  const widgets = new Map<string, WidgetEntry>();
+
+  function getEntry(trackId: string): WidgetEntry | undefined {
+    return widgets.get(trackId);
   }
 
   return {
-    async loadTrack(trackId: string, soundcloudUrl: string): Promise<void> {
-      // Clean up existing widget if any
-      const existing = widgets.get(trackId);
-      if (existing) {
-        existing.cleanups.forEach((fn) => fn());
-        existing.iframe.remove();
-      }
+    loadTrack(trackId: string, soundcloudUrl: string): Promise<TrackMetadata> {
+      return new Promise((resolve, reject) => {
+        const SC = getSCWidget();
+        if (!SC) {
+          reject(new Error('SoundCloud Widget API not loaded'));
+          return;
+        }
 
-      const iframe = document.createElement('iframe');
-      iframe.id = `sc-widget-${trackId}`;
-      iframe.src = buildWidgetUrl(soundcloudUrl);
-      iframe.width = '100%';
-      iframe.height = '166';
-      iframe.allow = 'autoplay';
-      iframe.style.display = 'none';
-      container.appendChild(iframe);
+        // Remove existing widget for this track
+        const existing = widgets.get(trackId);
+        if (existing) {
+          existing.iframe.remove();
+          widgets.delete(trackId);
+        }
 
-      widgets.set(trackId, {
-        iframe,
-        state: 'loading',
-        position: createTimePosition(0),
-        cleanups: [],
-      });
+        const container = getWidgetContainer();
+        const iframe = document.createElement('iframe');
+        iframe.id = `sc-widget-${trackId}`;
+        iframe.src = buildIframeSrc(soundcloudUrl);
+        iframe.width = '100%';
+        iframe.height = '166';
+        iframe.allow = 'autoplay';
+        iframe.setAttribute('scrolling', 'no');
+        iframe.setAttribute('frameborder', 'no');
+        container.appendChild(iframe);
 
-      // Wait for iframe to load
-      await new Promise<void>((resolve) => {
-        iframe.onload = () => {
-          const widget = widgets.get(trackId);
-          if (widget) widget.state = 'stopped';
-          resolve();
+        const widget = SC.Widget(iframe);
+
+        const entry: WidgetEntry = {
+          iframe,
+          widget,
+          state: 'loading',
+          trackId,
         };
+        widgets.set(trackId, entry);
+        callbacks.onStateChange?.(trackId, 'loading');
+
+        widget.bind(SC.Widget.Events.READY, () => {
+          entry.state = 'ready';
+          callbacks.onStateChange?.(trackId, 'ready');
+
+          // Fetch metadata
+          widget.getCurrentSound((sound: SCSound) => {
+            const metadata: TrackMetadata = {
+              title: sound.title,
+              artist: sound.user.username,
+              duration: sound.duration,
+              artworkUrl: sound.artwork_url,
+              permalinkUrl: sound.permalink_url,
+            };
+            callbacks.onMetadataLoaded?.(trackId, metadata);
+            resolve(metadata);
+          });
+
+          // Bind playback events
+          widget.bind(SC.Widget.Events.PLAY, () => {
+            entry.state = 'playing';
+            callbacks.onStateChange?.(trackId, 'playing');
+          });
+
+          widget.bind(SC.Widget.Events.PAUSE, () => {
+            entry.state = 'paused';
+            callbacks.onStateChange?.(trackId, 'paused');
+          });
+
+          widget.bind(SC.Widget.Events.FINISH, () => {
+            entry.state = 'stopped';
+            callbacks.onFinish?.(trackId);
+            callbacks.onStateChange?.(trackId, 'stopped');
+          });
+
+          widget.bind(SC.Widget.Events.PLAY_PROGRESS, (data: unknown) => {
+            const progress = data as SCProgressData;
+            callbacks.onProgress?.(trackId, progress.currentPosition, progress.relativePosition);
+          });
+
+          widget.bind(SC.Widget.Events.ERROR, () => {
+            entry.state = 'error';
+            callbacks.onError?.(trackId);
+            callbacks.onStateChange?.(trackId, 'error');
+          });
+        });
       });
     },
 
     unloadTrack(trackId: string): void {
-      const widget = widgets.get(trackId);
-      if (!widget) return;
-      widget.cleanups.forEach((fn) => fn());
-      widget.iframe.remove();
+      const entry = getEntry(trackId);
+      if (!entry) return;
+      entry.iframe.remove();
       widgets.delete(trackId);
     },
 
     play(trackId: string): void {
-      const widget = getWidget(trackId);
-      widget.iframe.contentWindow?.postMessage(
-        JSON.stringify({ method: 'play' }),
-        '*',
-      );
-      widget.state = 'playing';
+      getEntry(trackId)?.widget.play();
     },
 
     pause(trackId: string): void {
-      const widget = getWidget(trackId);
-      widget.iframe.contentWindow?.postMessage(
-        JSON.stringify({ method: 'pause' }),
-        '*',
-      );
-      widget.state = 'paused';
+      getEntry(trackId)?.widget.pause();
     },
 
     stop(trackId: string): void {
-      const widget = getWidget(trackId);
-      widget.iframe.contentWindow?.postMessage(
-        JSON.stringify({ method: 'pause' }),
-        '*',
-      );
-      widget.iframe.contentWindow?.postMessage(
-        JSON.stringify({ method: 'seekTo', value: 0 }),
-        '*',
-      );
-      widget.state = 'stopped';
-      widget.position = createTimePosition(0);
+      const entry = getEntry(trackId);
+      if (!entry) return;
+      entry.widget.pause();
+      entry.widget.seekTo(0);
+      entry.state = 'stopped';
+      callbacks.onStateChange?.(trackId, 'stopped');
     },
 
-    seekTo(trackId: string, position: TimePosition): void {
-      const widget = getWidget(trackId);
-      widget.iframe.contentWindow?.postMessage(
-        JSON.stringify({ method: 'seekTo', value: position }),
-        '*',
-      );
-      widget.position = position;
+    seekTo(trackId: string, positionMs: number): void {
+      getEntry(trackId)?.widget.seekTo(positionMs);
     },
 
-    setVolume(trackId: string, volume: Volume): void {
-      const widget = getWidget(trackId);
-      widget.iframe.contentWindow?.postMessage(
-        JSON.stringify({ method: 'setVolume', value: volume }),
-        '*',
-      );
-    },
-
-    getPosition(trackId: string): TimePosition {
-      return getWidget(trackId).position;
+    setVolume(trackId: string, volume: number): void {
+      getEntry(trackId)?.widget.setVolume(volume);
     },
 
     getState(trackId: string): TrackPlaybackState {
-      return getWidget(trackId).state;
-    },
-
-    onPositionChange(trackId: string, callback: (position: TimePosition) => void): () => void {
-      const widget = getWidget(trackId);
-      const handler = (event: MessageEvent) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.widgetId === widget.iframe.id && data.method === 'position') {
-            const pos = createTimePosition(data.value);
-            widget.position = pos;
-            callback(pos);
-          }
-        } catch {
-          // Ignore non-SC messages
-        }
-      };
-      window.addEventListener('message', handler);
-      const cleanup = () => window.removeEventListener('message', handler);
-      widget.cleanups.push(cleanup);
-      return cleanup;
-    },
-
-    onStateChange(trackId: string, callback: (state: TrackPlaybackState) => void): () => void {
-      const widget = getWidget(trackId);
-      const handler = (event: MessageEvent) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.widgetId === widget.iframe.id && data.method === 'state') {
-            widget.state = data.value as TrackPlaybackState;
-            callback(widget.state);
-          }
-        } catch {
-          // Ignore non-SC messages
-        }
-      };
-      window.addEventListener('message', handler);
-      const cleanup = () => window.removeEventListener('message', handler);
-      widget.cleanups.push(cleanup);
-      return cleanup;
-    },
-
-    onFinish(trackId: string, callback: () => void): () => void {
-      const widget = getWidget(trackId);
-      const handler = (event: MessageEvent) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.widgetId === widget.iframe.id && data.method === 'finish') {
-            callback();
-          }
-        } catch {
-          // Ignore non-SC messages
-        }
-      };
-      window.addEventListener('message', handler);
-      const cleanup = () => window.removeEventListener('message', handler);
-      widget.cleanups.push(cleanup);
-      return cleanup;
+      return getEntry(trackId)?.state ?? 'stopped';
     },
 
     stopAll(): void {
-      for (const [trackId] of widgets) {
-        const widget = widgets.get(trackId);
-        if (!widget) continue;
-        widget.iframe.contentWindow?.postMessage(
-          JSON.stringify({ method: 'pause' }),
-          '*',
-        );
-        widget.iframe.contentWindow?.postMessage(
-          JSON.stringify({ method: 'setVolume', value: 0 }),
-          '*',
-        );
-        widget.state = 'stopped';
-        widget.position = createTimePosition(0);
+      for (const [, entry] of widgets) {
+        entry.widget.pause();
+        entry.widget.setVolume(0);
+        entry.state = 'stopped';
+        callbacks.onStateChange?.(entry.trackId, 'stopped');
       }
+    },
+
+    isLoaded(trackId: string): boolean {
+      return widgets.has(trackId);
     },
   };
 }
+
+export type SoundCloudPlayer = ReturnType<typeof createSoundCloudPlayer>;

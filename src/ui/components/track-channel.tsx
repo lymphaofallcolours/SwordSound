@@ -1,7 +1,9 @@
 import type { Track } from '@domain/models/track';
+import type { TrackPlaybackInfo } from '@ui/stores/playback-store';
 
 type TrackChannelProps = {
   track: Track;
+  playbackInfo?: TrackPlaybackInfo;
   onPlay: () => void;
   onPause: () => void;
   onStop: () => void;
@@ -13,6 +15,7 @@ type TrackChannelProps = {
 
 export function TrackChannel({
   track,
+  playbackInfo,
   onPlay,
   onPause,
   onStop,
@@ -21,26 +24,40 @@ export function TrackChannel({
   onLoopToggle,
   onRemove,
 }: TrackChannelProps) {
-  const isPlaying = false; // Will be driven by playback store later
+  const state = playbackInfo?.state ?? 'stopped';
+  const isPlaying = state === 'playing';
+  const isLoading = state === 'loading';
+  const isError = state === 'error';
+  const progress = (playbackInfo?.relativePosition ?? 0) * 100;
+
+  const displayTitle = playbackInfo?.metadata?.title ?? track.title;
+  const displayArtist = playbackInfo?.metadata?.artist ?? track.artist;
+
+  const statusColor = isError
+    ? 'var(--color-panic)'
+    : isPlaying
+      ? 'var(--color-playing)'
+      : state === 'paused'
+        ? 'var(--color-paused)'
+        : track.muted
+          ? 'var(--color-base-600)'
+          : 'var(--color-stopped)';
 
   return (
     <div className="group flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--color-base-850)] transition-colors border-b border-[var(--color-base-800)]/50">
       {/* Status indicator */}
       <div
         className={`w-1.5 h-8 rounded-full flex-shrink-0 ${isPlaying ? 'animate-pulse-glow' : ''}`}
-        style={{
-          backgroundColor: isPlaying
-            ? 'var(--color-playing)'
-            : track.muted
-              ? 'var(--color-base-600)'
-              : 'var(--color-stopped)',
-        }}
+        style={{ backgroundColor: statusColor }}
       />
 
       {/* Transport controls */}
       <div className="flex items-center gap-0.5 flex-shrink-0">
-        <SmallButton onClick={onPlay} title="Play" icon="▶" />
-        <SmallButton onClick={onPause} title="Pause" icon="⏸" />
+        {isPlaying ? (
+          <SmallButton onClick={onPause} title="Pause" icon="⏸" />
+        ) : (
+          <SmallButton onClick={onPlay} title="Play" icon="▶" disabled={isLoading} />
+        )}
         <SmallButton onClick={onStop} title="Stop" icon="◼" />
       </div>
 
@@ -48,8 +65,18 @@ export function TrackChannel({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-[var(--color-base-100)] truncate">
-            {track.title}
+            {displayTitle}
           </span>
+          {isLoading && (
+            <span className="px-1.5 py-0.5 text-[9px] font-[var(--font-display)] uppercase tracking-wider bg-blue-500/20 text-blue-400 rounded-sm animate-pulse">
+              loading
+            </span>
+          )}
+          {isError && (
+            <span className="px-1.5 py-0.5 text-[9px] font-[var(--font-display)] uppercase tracking-wider bg-red-500/20 text-red-400 rounded-sm">
+              error
+            </span>
+          )}
           {track.isOneShot && (
             <span className="px-1.5 py-0.5 text-[9px] font-[var(--font-display)] uppercase tracking-wider bg-amber-500/20 text-amber-400 rounded-sm">
               1-shot
@@ -60,20 +87,15 @@ export function TrackChannel({
               loop
             </span>
           )}
-          {track.cueLoops.length > 0 && (
-            <span className="px-1.5 py-0.5 text-[9px] font-[var(--font-display)] uppercase tracking-wider bg-cyan-500/20 text-cyan-400 rounded-sm">
-              {track.cueLoops.length} cue{track.cueLoops.length !== 1 ? 's' : ''}
-            </span>
-          )}
         </div>
         <span className="text-xs text-[var(--color-base-500)] truncate block">
-          {track.artist}
+          {displayArtist}
         </span>
       </div>
 
-      {/* Timeline bar placeholder */}
+      {/* Timeline bar */}
       <div className="w-32 h-2 timeline-track flex-shrink-0 hidden lg:block">
-        <div className="timeline-progress h-full" style={{ width: '0%' }} />
+        <div className="timeline-progress h-full transition-[width] duration-300" style={{ width: `${progress}%` }} />
       </div>
 
       {/* Volume */}
@@ -128,16 +150,18 @@ export function TrackChannel({
   );
 }
 
-function SmallButton({ onClick, title, icon }: { onClick: () => void; title: string; icon: string }) {
+function SmallButton({ onClick, title, icon, disabled }: { onClick: () => void; title: string; icon: string; disabled?: boolean }) {
   return (
     <button
       onClick={onClick}
       title={title}
+      disabled={disabled}
       className="
         w-6 h-6 flex items-center justify-center
         text-[var(--color-base-400)] hover:text-[var(--color-base-100)]
         hover:bg-[var(--color-base-700)] rounded-sm
         transition-colors text-[10px]
+        disabled:opacity-30 disabled:cursor-not-allowed
       "
     >
       {icon}
