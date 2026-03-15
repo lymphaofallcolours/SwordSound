@@ -58,6 +58,7 @@ export function duplicateScene(session: Session, sceneId: string): Session {
       groupId: track.groupId,
       isOneShot: track.isOneShot,
       autoPlay: track.autoPlay,
+      alias: track.alias,
     }),
   );
 
@@ -119,7 +120,7 @@ export function removeTrack(session: Session, sceneId: string, trackId: string):
 }
 
 type UpdateTrackInput = Partial<
-  Pick<Track, 'volume' | 'muted' | 'loopEnabled' | 'crossfadeLoop' | 'crossfadeDuration' | 'customStart' | 'customEnd' | 'isOneShot' | 'autoPlay' | 'groupId'>
+  Pick<Track, 'volume' | 'muted' | 'loopEnabled' | 'crossfadeLoop' | 'crossfadeDuration' | 'customStart' | 'customEnd' | 'isOneShot' | 'autoPlay' | 'groupId' | 'alias'>
 >;
 
 export function updateTrack(
@@ -155,6 +156,7 @@ export function copyTrack(scene: Scene, trackId: string): Track {
     groupId: source.groupId,
     isOneShot: source.isOneShot,
     autoPlay: source.autoPlay,
+    alias: source.alias,
   });
 }
 

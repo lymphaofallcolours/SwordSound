@@ -12,9 +12,11 @@ type SceneListProps = {
   onMoveScene?: (sceneId: string, direction: 'up' | 'down') => void;
   onRenameScene?: (id: string, newName: string) => void;
   onDragScene?: (sceneId: string, targetSceneId: string) => void;
+  onDropTrackOnScene?: (sceneId: string) => void;
+  isTrackBeingDragged?: boolean;
 };
 
-export function SceneList({ scenes, activeSceneId, onSelectScene, onAddScene, onDuplicateScene, onDeleteScene, onMoveScene, onRenameScene, onDragScene }: SceneListProps) {
+export function SceneList({ scenes, activeSceneId, onSelectScene, onAddScene, onDuplicateScene, onDeleteScene, onMoveScene, onRenameScene, onDragScene, onDropTrackOnScene, isTrackBeingDragged }: SceneListProps) {
   const [contextMenuId, setContextMenuId] = useState<string | null>(null);
   const [renamingSceneId, setRenamingSceneId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -54,6 +56,9 @@ export function SceneList({ scenes, activeSceneId, onSelectScene, onAddScene, on
                 e.preventDefault();
                 if (dragSceneId && dragSceneId !== scene.id) {
                   onDragScene?.(dragSceneId, scene.id);
+                } else if (!dragSceneId) {
+                  // Track dragged from content area onto this scene
+                  onDropTrackOnScene?.(scene.id);
                 }
                 setDragSceneId(null);
               }}
@@ -66,8 +71,9 @@ export function SceneList({ scenes, activeSceneId, onSelectScene, onAddScene, on
                   setContextMenuId(contextMenuId === scene.id ? null : scene.id);
                 }}
                 className={`
-                  w-full text-left px-3 py-2 flex items-center gap-2
+                  w-full text-left px-3 flex items-center gap-2
                   transition-all duration-150 group
+                  ${isTrackBeingDragged ? 'py-4 border border-dashed border-[var(--color-base-600)]' : 'py-2'}
                   ${isActive
                     ? 'bg-[var(--color-accent-dim)] text-[var(--color-base-100)]'
                     : 'text-[var(--color-base-300)] hover:bg-[var(--color-base-800)] hover:text-[var(--color-base-100)]'

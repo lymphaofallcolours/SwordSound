@@ -57,7 +57,7 @@ export function TrackChannel({
   isDragging,
 }: TrackChannelProps) {
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
-  const [hoverTime, setHoverTime] = useState<string | null>(null);
+  const [hoverInfo, setHoverInfo] = useState<{ time: string; pct: number } | null>(null);
   const state = playbackInfo?.state ?? 'stopped';
   const isPlaying = state === 'playing';
   const isLoading = state === 'loading';
@@ -178,9 +178,9 @@ export function TrackChannel({
           onMouseMove={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-            setHoverTime(formatTime(Math.round(fraction * durationMs)));
+            setHoverInfo({ time: formatTime(Math.round(fraction * durationMs)), pct: fraction * 100 });
           }}
-          onMouseLeave={() => setHoverTime(null)}
+          onMouseLeave={() => setHoverInfo(null)}
         >
           {/* Custom start/end indicators */}
           {track.customStart > 0 && durationMs > 0 && (
@@ -216,12 +216,19 @@ export function TrackChannel({
             );
           })}
           <div className="timeline-progress h-full transition-[width] duration-200 relative z-10" style={{ width: `${progress}%` }} />
+          {/* Floating hover time label */}
+          {hoverInfo && (
+            <div
+              className="absolute -top-5 z-20 px-1 py-0.5 bg-[var(--color-base-800)] border border-[var(--color-base-600)] rounded text-[var(--color-accent)] pointer-events-none"
+              style={{ left: `${hoverInfo.pct}%`, transform: 'translateX(-50%)', fontSize: '9px' }}
+            >
+              {hoverInfo.time}
+            </div>
+          )}
         </div>
-        {/* Time display — shows hover time or current/total */}
+        {/* Time display — always shows current / total */}
         <div className="flex justify-between tabular-nums" style={{ fontSize: 'var(--text-xxs)' }}>
-          <span className="text-[var(--color-base-400)]">
-            {hoverTime ? <span className="text-[var(--color-accent)]">{hoverTime}</span> : formatTime(positionMs)}
-          </span>
+          <span className="text-[var(--color-base-400)]">{formatTime(positionMs)}</span>
           <span className="text-[var(--color-base-600)]">{formatTime(durationMs)}</span>
         </div>
       </div>

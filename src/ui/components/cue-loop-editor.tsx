@@ -10,7 +10,7 @@ type CueLoopEditorProps = {
   open: boolean;
   onClose: () => void;
   track: Track;
-  onSave: (cueLoops: CueLoop[], customStart?: number, customEnd?: number | null, alias?: string) => void;
+  onSave: (cueLoops: CueLoop[], customStart?: number, customEnd?: number | null, alias?: string, extra?: Record<string, unknown>) => void;
 };
 
 function formatTime(ms: number): string {
@@ -31,6 +31,9 @@ function parseTime(str: string): number | null {
 
 export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorProps) {
   const [alias, setAlias] = useState(track.alias ?? '');
+  const [crossfadeLoop, setCrossfadeLoop] = useState(track.crossfadeLoop);
+  const [crossfadeDurationSec, setCrossfadeDurationSec] = useState(track.crossfadeDuration as number);
+  const [autoPlay, setAutoPlay] = useState(track.autoPlay);
   const [customStartStr, setCustomStartStr] = useState(
     track.customStart > 0 ? formatTime(track.customStart) : '',
   );
@@ -91,7 +94,11 @@ export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorPro
 
     const customStart = parseTime(customStartStr) ?? 0;
     const customEnd = customEndStr ? (parseTime(customEndStr) ?? null) : null;
-    onSave(filtered, customStart, customEnd, alias);
+    onSave(filtered, customStart, customEnd, alias, {
+      crossfadeLoop,
+      crossfadeDuration: crossfadeDurationSec,
+      autoPlay,
+    });
     onClose();
   };
 
@@ -116,6 +123,34 @@ export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorPro
             placeholder="e.g., Combat theme, Rain ambience"
             className="w-full px-2 py-1 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-xs text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
           />
+        </div>
+
+        {/* Playback options */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <label className="flex items-center gap-1.5 text-xs text-[var(--color-base-300)] cursor-pointer">
+            <input type="checkbox" checked={autoPlay} onChange={(e) => setAutoPlay(e.target.checked)}
+              className="accent-[var(--color-accent)]" />
+            Auto-play on scene switch
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-[var(--color-base-300)] cursor-pointer">
+            <input type="checkbox" checked={crossfadeLoop} onChange={(e) => setCrossfadeLoop(e.target.checked)}
+              className="accent-[var(--color-accent)]" />
+            Crossfade loop
+          </label>
+          {crossfadeLoop && (
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min={0.5}
+                max={10}
+                step={0.5}
+                value={crossfadeDurationSec}
+                onChange={(e) => setCrossfadeDurationSec(Number(e.target.value))}
+                className="w-14 px-1 py-0.5 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-xs text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
+              />
+              <span className="text-[10px] text-[var(--color-base-500)]">sec</span>
+            </div>
+          )}
         </div>
 
         {/* Custom start/end points */}

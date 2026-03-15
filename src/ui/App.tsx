@@ -93,20 +93,27 @@ export function App() {
   // Loop support + custom end enforcement
   useEffect(() => {
     setOnTrackFinish((trackId: string) => {
-      if (!currentSession) return;
-      for (const scene of currentSession.scenes) {
+      const session = sessionRef.current;
+      if (!session) return;
+      for (const scene of session.scenes) {
         const track = scene.tracks.find((t) => t.id === trackId);
-        if (track?.loopEnabled) {
-          const startPos = track.customStart > 0 ? track.customStart : 0;
+        if (track?.loopEnabled || track?.crossfadeLoop) {
+          const startPos = track.customStart > 0 ? (track.customStart as number) : 0;
+          const xfadeDur = Number(track.crossfadeDuration) || 0;
           setTimeout(() => {
             if (startPos > 0) seekTrack(trackId, startPos);
-            playTrack(trackId);
+            if (track.crossfadeLoop && xfadeDur > 0) {
+              // Soft crossfade restart: fade in from silence
+              fadeInTrack(trackId, Number(track.volume), xfadeDur * 1000);
+            } else {
+              playTrack(trackId);
+            }
           }, 100);
           return;
         }
       }
     });
-  }, [currentSession, setOnTrackFinish, playTrack, seekTrack]);
+  }, [currentSession, setOnTrackFinish, playTrack, seekTrack, fadeInTrack]);
 
   // Custom end point enforcement — use ref to avoid recreating interval on every tick
   const sessionRef = useRef(currentSession);
@@ -569,6 +576,16 @@ export function App() {
                 const dir = distance > 0 ? 'down' : 'up';
                 for (let i = 0; i < Math.abs(distance); i++) moveScene(fromId, dir);
               }}
+              isTrackBeingDragged={!!dragTrackId}
+              onDropTrackOnScene={(targetSceneId) => {
+                if (!dragTrackId || !activeScene || targetSceneId === activeScene.id) return;
+                // Move the dragged track to the target scene
+                const track = activeScene.tracks.find((t) => t.id === dragTrackId);
+                if (!track) return;
+                addTrack(targetSceneId, track);
+                removeTrack(activeScene.id, dragTrackId);
+                setDragTrackId(null);
+              }}
             />
           </div>
           <OneShotPalette
@@ -643,13 +660,28 @@ export function App() {
                 )}
               </div>
 
-              <div className="flex-shrink-0 px-4 py-2 border-t border-[var(--color-base-800)] bg-[var(--color-base-900)]">
+              <div className="flex-shrink-0 px-4 py-2 border-t border-[var(--color-base-800)] bg-[var(--color-base-900)] flex items-center gap-4">
                 <button
                   onClick={() => setShowAddTrack(true)}
-                  className="text-xs text-[var(--color-base-400)] hover:text-[var(--color-accent)] font-[var(--font-display)] transition-colors"
+                  className="text-xs text-[var(--color-base-400)] hover:text-[var(--color-accent)] transition-colors"
                 >
                   + Add Track
                 </button>
+                {clipboardTrack && (
+                  <button
+                    onClick={() => {
+                      if (!activeScene || !clipboardTrack) return;
+                      const copy = copyTrack(
+                        { ...activeScene, tracks: [clipboardTrack] } as typeof activeScene,
+                        clipboardTrack.id,
+                      );
+                      addTrack(activeScene.id, copy);
+                    }}
+                    className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+                  >
+                    + Paste "{clipboardTrack.title?.slice(0, 20)}"
+                  </button>
+                )}
               </div>
             </>
           ) : (
@@ -691,12 +723,13 @@ export function App() {
             open={true}
             onClose={() => setEditingCueLoopsTrackId(null)}
             track={track}
-            onSave={(cueLoops: CueLoop[], customStart?: number, customEnd?: number | null, alias?: string) => {
+            onSave={(cueLoops: CueLoop[], customStart?: number, customEnd?: number | null, alias?: string, extra?: Record<string, unknown>) => {
               updateTrack(activeScene.id, track.id, {
                 cueLoops,
                 ...(customStart !== undefined && { customStart }),
                 ...(customEnd !== undefined && { customEnd }),
                 ...(alias !== undefined && { alias }),
+                ...extra,
               });
               setCueLoops(track.id, cueLoops);
               // Trigger seek cooldown for safe editing during playback
