@@ -1,46 +1,37 @@
 @import 'tailwindcss';
 
-@font-face {
-  font-family: 'JetBrains Mono';
-  src: url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-}
-
-@font-face {
-  font-family: 'DM Sans';
-  src: url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
-}
-
 @theme {
-  --color-base-950: #040712;
-  --color-base-900: #0a0f1f;
-  --color-base-850: #0f1629;
-  --color-base-800: #141c33;
-  --color-base-700: #1e2a47;
-  --color-base-600: #2a3a5c;
-  --color-base-500: #475984;
-  --color-base-400: #6b82ad;
-  --color-base-300: #94a8cc;
-  --color-base-200: #c1cedf;
-  --color-base-100: #e4e9f0;
+  /* Darker, more professional palette — black base with subtle cool gray */
+  --color-base-950: #09090b;
+  --color-base-900: #111114;
+  --color-base-850: #161619;
+  --color-base-800: #1c1c20;
+  --color-base-700: #27272b;
+  --color-base-600: #3f3f46;
+  --color-base-500: #52525b;
+  --color-base-400: #71717a;
+  --color-base-300: #a1a1aa;
+  --color-base-200: #d4d4d8;
+  --color-base-100: #f0f0f2;
 
-  --color-accent: var(--scene-color, #6366f1);
-  --color-accent-glow: color-mix(in srgb, var(--scene-color, #6366f1) 40%, transparent);
-  --color-accent-dim: color-mix(in srgb, var(--scene-color, #6366f1) 15%, transparent);
+  --color-accent: var(--scene-color, #8b5cf6);
+  --color-accent-glow: color-mix(in srgb, var(--scene-color, #8b5cf6) 25%, transparent);
+  --color-accent-dim: color-mix(in srgb, var(--scene-color, #8b5cf6) 10%, transparent);
 
-  --color-panic: #ef4444;
-  --color-panic-glow: rgba(239, 68, 68, 0.4);
+  --color-panic: #dc2626;
+  --color-panic-glow: rgba(220, 38, 38, 0.3);
 
   --color-playing: #22c55e;
   --color-paused: #eab308;
-  --color-stopped: #6b82ad;
+  --color-stopped: #52525b;
   --color-looping: #a855f7;
 
-  --font-display: 'JetBrains Mono', ui-monospace, monospace;
-  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-display: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-body: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
 :root {
-  --scene-color: #6366f1;
+  --scene-color: #8b5cf6;
 }
 
 * {
@@ -57,6 +48,24 @@ body {
   user-select: none;
 }
 
+/* Aeroglass-style translucent panels */
+.glass-panel {
+  background: rgba(17, 17, 20, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-sidebar {
+  background: rgba(17, 17, 20, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Subtle inner glow for panels */
+.inner-glow {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
 /* Drag region for Electron frameless window */
 .drag-region {
   -webkit-app-region: drag;
@@ -68,11 +77,11 @@ body {
 
 /* Glow effect utility */
 .glow-accent {
-  box-shadow: 0 0 12px var(--color-accent-glow), 0 0 4px var(--color-accent-glow);
+  box-shadow: 0 0 8px var(--color-accent-glow), 0 0 2px var(--color-accent-glow);
 }
 
 .glow-panic {
-  box-shadow: 0 0 16px var(--color-panic-glow), 0 0 6px var(--color-panic-glow);
+  box-shadow: 0 0 12px var(--color-panic-glow), 0 0 4px var(--color-panic-glow);
 }
 
 /* Status dot pulse */
@@ -87,19 +96,38 @@ body {
 
 /* Track timeline bar */
 .timeline-track {
-  background: linear-gradient(
-    to right,
-    var(--color-base-700) 0%,
-    var(--color-base-600) 100%
-  );
+  background: var(--color-base-700);
   border-radius: 2px;
 }
 
 .timeline-progress {
   background: linear-gradient(
     to right,
-    var(--color-accent) 0%,
-    color-mix(in srgb, var(--color-accent) 60%, var(--color-base-600)) 100%
+    var(--color-accent),
+    color-mix(in srgb, var(--color-accent) 70%, var(--color-base-600))
   );
   border-radius: 2px;
+}
+
+/* Volume slider styling */
+input[type="range"] {
+  appearance: none;
+  height: 3px;
+  background: var(--color-base-600);
+  border-radius: 2px;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-base-200);
+  cursor: pointer;
+  border: 1px solid var(--color-base-500);
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: white;
 }

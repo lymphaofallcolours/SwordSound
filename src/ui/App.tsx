@@ -36,9 +36,12 @@ export function App() {
   const pauseTrack = usePlaybackStore((s) => s.pause);
   const stopTrack = usePlaybackStore((s) => s.stop);
   const setTrackVolume = usePlaybackStore((s) => s.setVolume);
+  const fadeInTrack = usePlaybackStore((s) => s.fadeIn);
+  const fadeOutTrack = usePlaybackStore((s) => s.fadeOut);
   const panic = usePlaybackStore((s) => s.panic);
   const tracks = usePlaybackStore((s) => s.tracks);
   const saveCurrentSession = useSessionStore((s) => s.saveCurrentSession);
+  const updateScene = useSessionStore((s) => s.updateScene);
 
   const [showAddScene, setShowAddScene] = useState(false);
   const [showAddTrack, setShowAddTrack] = useState(false);
@@ -122,9 +125,19 @@ export function App() {
       if (!tracks[trackId] || tracks[trackId].state === 'error') {
         await loadTrackToPlayer(trackId, soundcloudUrl);
       }
+      // Restore configured volume before playing
+      if (currentSession) {
+        for (const scene of currentSession.scenes) {
+          const track = scene.tracks.find((t) => t.id === trackId);
+          if (track) {
+            setTrackVolume(trackId, track.muted ? 0 : track.volume);
+            break;
+          }
+        }
+      }
       playTrack(trackId);
     },
-    [tracks, loadTrackToPlayer, playTrack],
+    [tracks, loadTrackToPlayer, playTrack, setTrackVolume, currentSession],
   );
 
   const handleVolumeChange = useCallback(
@@ -175,6 +188,29 @@ export function App() {
     }
   }, [activeScene, stopTrack]);
 
+  const handleFadeInScene = useCallback(() => {
+    if (!activeScene) return;
+    for (const track of activeScene.tracks) {
+      if (!track.muted) {
+        // Load if needed, then fade in
+        if (!tracks[track.id] || tracks[track.id].state === 'error') {
+          loadTrackToPlayer(track.id, track.soundcloudUrl).then(() => {
+            fadeInTrack(track.id, track.volume, 3000);
+          });
+        } else {
+          fadeInTrack(track.id, track.volume, 3000);
+        }
+      }
+    }
+  }, [activeScene, tracks, loadTrackToPlayer, fadeInTrack]);
+
+  const handleFadeOutScene = useCallback(() => {
+    if (!activeScene) return;
+    for (const track of activeScene.tracks) {
+      fadeOutTrack(track.id, 3000, true);
+    }
+  }, [activeScene, fadeOutTrack]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -209,7 +245,12 @@ export function App() {
           sessions={sessionList}
           onCreateSession={() => openModal('create-session')}
           onLoadSession={loadSession}
-          onImportSession={() => {}}
+          onImportSession={async () => {
+            if (!window.swordsound?.dialog) return;
+            const filePath = await window.swordsound.dialog.showOpen();
+            if (!filePath) return;
+            // TODO: read file and import session
+          }}
         />
         <CreateSessionDialog
           open={activeModal === 'create-session'}
@@ -256,8 +297,9 @@ export function App() {
                 scene={activeScene}
                 onPlayScene={handlePlayScene}
                 onStopScene={handleStopScene}
-                onFadeIn={() => {}}
-                onFadeOut={() => {}}
+                onFadeIn={handleFadeInScene}
+                onFadeOut={handleFadeOutScene}
+                onUpdateNotes={(notes) => updateScene(activeScene.id, { notes })}
               />
 
               <div className="flex-1 overflow-y-auto">

@@ -6,6 +6,7 @@ import {
   type TrackPlaybackState,
   type TrackMetadata,
 } from '@infrastructure/soundcloud/soundcloud-widget';
+import { fadeTrack, cancelAllFades } from '@infrastructure/soundcloud/fade-engine';
 
 export type TrackPlaybackInfo = {
   state: TrackPlaybackState;
@@ -27,6 +28,8 @@ export type PlaybackState = {
   stop: (trackId: string) => void;
   setVolume: (trackId: string, volume: number) => void;
   seekTo: (trackId: string, positionMs: number) => void;
+  fadeIn: (trackId: string, targetVolume: number, durationMs: number) => void;
+  fadeOut: (trackId: string, durationMs: number, pauseAfter?: boolean) => void;
   panic: () => void;
   unloadTrack: (trackId: string) => void;
   getTrackState: (trackId: string) => TrackPlaybackState;
@@ -147,7 +150,30 @@ export function createPlaybackStore() {
       });
     },
 
+    fadeIn: (trackId, targetVolume, durationMs) => {
+      const { player } = get();
+      if (!player) return;
+      player.setVolume(trackId, 0);
+      player.play(trackId);
+      fadeTrack(player, { trackId, fromVolume: 0, toVolume: targetVolume, durationMs });
+    },
+
+    fadeOut: (trackId, durationMs, pauseAfter = true) => {
+      const { player } = get();
+      if (!player) return;
+      fadeTrack(player, {
+        trackId,
+        fromVolume: 100,
+        toVolume: 0,
+        durationMs,
+        onComplete: () => {
+          if (pauseAfter) player.pause(trackId);
+        },
+      });
+    },
+
     panic: () => {
+      cancelAllFades();
       get().player?.stopAll();
     },
 
