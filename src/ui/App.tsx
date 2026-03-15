@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 
 import { useSessionStore, useUiStore, usePlaybackStore, useSettingsStore } from '@ui/hooks/use-stores';
 import { WelcomeScreen } from '@ui/components/welcome-screen';
@@ -16,6 +16,7 @@ import { CueLoopEditor } from '@ui/components/cue-loop-editor';
 import { createTrack } from '@domain/models/track';
 import type { CueLoop } from '@domain/models/cue-loop';
 import { duckAllExcept, unduckAll } from '@infrastructure/soundcloud/duck-engine';
+import { copyTrack } from '@application/scene/scene-use-cases';
 import { useUndo } from '@ui/hooks/use-undo';
 
 export function App() {
@@ -56,6 +57,7 @@ export function App() {
   const oneShotTracks = useSessionStore((s) => s.oneShotTracks);
   const addOneShotTrack = useSessionStore((s) => s.addOneShotTrack);
   const removeOneShotTrack = useSessionStore((s) => s.removeOneShotTrack);
+  const updateOneShotTrack = useSessionStore((s) => s.updateOneShotTrack);
   const moveScene = useSessionStore((s) => s.moveScene);
   const moveTrack = useSessionStore((s) => s.moveTrack);
 
@@ -76,6 +78,8 @@ export function App() {
   const [showAttribution, setShowAttribution] = useState(false);
   const [dragTrackId, setDragTrackId] = useState<string | null>(null);
   const [editingCueLoopsTrackId, setEditingCueLoopsTrackId] = useState<string | null>(null);
+  const [isDucked, setIsDucked] = useState(false);
+  const [clipboardTrack, setClipboardTrack] = useState<ReturnType<typeof copyTrack> | null>(null);
 
   // Initialize playback engine
   useEffect(() => {
@@ -86,20 +90,53 @@ export function App() {
     refreshSessionList();
   }, [refreshSessionList]);
 
-  // Loop support: when a track finishes, replay if loop is enabled
+  // Loop support + custom end enforcement
   useEffect(() => {
     setOnTrackFinish((trackId: string) => {
       if (!currentSession) return;
       for (const scene of currentSession.scenes) {
         const track = scene.tracks.find((t) => t.id === trackId);
         if (track?.loopEnabled) {
-          // Small delay to avoid race with widget state
-          setTimeout(() => playTrack(trackId), 100);
+          const startPos = track.customStart > 0 ? track.customStart : 0;
+          setTimeout(() => {
+            if (startPos > 0) seekTrack(trackId, startPos);
+            playTrack(trackId);
+          }, 100);
           return;
         }
       }
     });
-  }, [currentSession, setOnTrackFinish, playTrack]);
+  }, [currentSession, setOnTrackFinish, playTrack, seekTrack]);
+
+  // Custom end point enforcement — use ref to avoid recreating interval on every tick
+  const sessionRef = useRef(currentSession);
+  const tracksRef = useRef(tracks);
+  sessionRef.current = currentSession;
+  tracksRef.current = tracks;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const session = sessionRef.current;
+      const playbackTracks = tracksRef.current;
+      if (!session) return;
+      for (const scene of session.scenes) {
+        for (const track of scene.tracks) {
+          if (!track.customEnd || track.customEnd <= 0) continue;
+          const info = playbackTracks[track.id];
+          if (info?.state !== 'playing') continue;
+          if (info.positionMs >= (track.customEnd as number) - 500) {
+            if (track.loopEnabled) {
+              const startPos = track.customStart > 0 ? (track.customStart as number) : 0;
+              seekTrack(track.id, startPos);
+            } else {
+              stopTrack(track.id);
+            }
+          }
+        }
+      }
+    }, 300);
+    return () => clearInterval(interval);
+  }, [seekTrack, stopTrack]);
 
   // Auto-save session every 30 seconds when changes occur
   useEffect(() => {
@@ -121,7 +158,23 @@ export function App() {
 
   const handlePanic = useCallback(() => {
     panic();
+    setIsDucked(false);
   }, [panic]);
+
+  const player = usePlaybackStore((s) => s.player);
+
+  const handleDuckToggle = useCallback(() => {
+    if (!player) return;
+    const allPlayingIds = Object.keys(tracks).filter((id) => tracks[id]?.state === 'playing');
+    if (allPlayingIds.length === 0) return;
+    if (isDucked) {
+      unduckAll(player, allPlayingIds, 500);
+      setIsDucked(false);
+    } else {
+      duckAllExcept(player, [], allPlayingIds, 20, 300);
+      setIsDucked(true);
+    }
+  }, [isDucked, tracks, player]);
 
   const handleAddTrack = useCallback(
     async (url: string) => {
@@ -156,7 +209,7 @@ export function App() {
       if (!tracks[trackId] || tracks[trackId].state === 'error') {
         await loadTrackToPlayer(trackId, soundcloudUrl);
       }
-      // Restore configured volume and initialize cue loops
+      // Restore configured volume, initialize cue loops, seek to custom start
       if (currentSession) {
         for (const scene of currentSession.scenes) {
           const track = scene.tracks.find((t) => t.id === trackId);
@@ -164,6 +217,10 @@ export function App() {
             setTrackVolume(trackId, track.muted ? 0 : track.volume);
             if (track.cueLoops.length > 0) {
               setCueLoops(trackId, track.cueLoops);
+            }
+            // Seek to custom start point if set
+            if (track.customStart > 0) {
+              seekTrack(trackId, track.customStart);
             }
             break;
           }
@@ -285,20 +342,15 @@ export function App() {
 
       const metadata = await loadTrackToPlayer(track.id, url);
       if (metadata) {
-        // Update the one-shot track with real metadata
-        const updated = createTrack({
-          soundcloudUrl: url,
+        updateOneShotTrack(track.id, {
           title: metadata.title,
           artist: metadata.artist,
           duration: metadata.duration,
           artworkUrl: metadata.artworkUrl,
-          isOneShot: true,
-        });
-        removeOneShotTrack(track.id);
-        addOneShotTrack({ ...updated, id: track.id } as typeof updated);
+        } as Partial<typeof track>);
       }
     },
-    [addOneShotTrack, removeOneShotTrack, loadTrackToPlayer],
+    [addOneShotTrack, updateOneShotTrack, loadTrackToPlayer],
   );
 
   const handleFadeInScene = useCallback(() => {
@@ -387,6 +439,11 @@ export function App() {
       switch (e.key) {
         case 'Escape':
           panic();
+          setIsDucked(false);
+          break;
+        case 'd':
+        case 'D':
+          handleDuckToggle();
           break;
         case ' ':
           e.preventDefault();
@@ -403,7 +460,7 @@ export function App() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [activeScene, tracks, panic, handlePlayScene, handleStopScene, currentSession, undo, redo, pushState, pushRedo]);
+  }, [activeScene, tracks, panic, handlePlayScene, handleStopScene, handleDuckToggle, currentSession, undo, redo, pushState, pushRedo]);
 
   // Welcome screen
   if (!currentSession) {
@@ -502,6 +559,16 @@ export function App() {
               onDuplicateScene={duplicateScene}
               onDeleteScene={removeScene}
               onMoveScene={moveScene}
+              onRenameScene={(id, name) => updateScene(id, { name })}
+              onDragScene={(fromId, toId) => {
+                const ids = currentSession.scenes.map((s) => s.id);
+                const fromIdx = ids.indexOf(fromId);
+                const toIdx = ids.indexOf(toId);
+                if (fromIdx === -1 || toIdx === -1) return;
+                const distance = toIdx - fromIdx;
+                const dir = distance > 0 ? 'down' : 'up';
+                for (let i = 0; i < Math.abs(distance); i++) moveScene(fromId, dir);
+              }}
             />
           </div>
           <OneShotPalette
@@ -525,6 +592,8 @@ export function App() {
                 onFadeOut={handleFadeOutScene}
                 fadeDurationMs={fadeDurationMs}
                 onUpdateNotes={(notes) => updateScene(activeScene.id, { notes })}
+                onDuckToggle={handleDuckToggle}
+                isDucked={isDucked}
               />
 
               <div className="flex-1 overflow-y-auto">
@@ -543,9 +612,16 @@ export function App() {
                     onSeek={(posMs) => seekTrack(track.id, posMs)}
                     onBreakCueLoop={track.cueLoops.length > 0 ? () => breakCueLoop(track.id) : undefined}
                     onEditCueLoops={() => setEditingCueLoopsTrackId(track.id)}
+                    onCopy={() => setClipboardTrack(copyTrack(activeScene, track.id))}
+                    onDuplicate={() => {
+                      const copy = copyTrack(activeScene, track.id);
+                      addTrack(activeScene.id, copy);
+                    }}
+                    onAutoPlayToggle={() => updateTrack(activeScene.id, track.id, { autoPlay: !track.autoPlay })}
                     onMoveUp={() => moveTrack(activeScene.id, track.id, 'up')}
                     onMoveDown={() => moveTrack(activeScene.id, track.id, 'down')}
                     onDragStart={() => setDragTrackId(track.id)}
+                    onDragEnd={() => setDragTrackId(null)}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => handleDropOnTrack(track.id)}
                     isFirst={index === 0}
@@ -615,13 +691,17 @@ export function App() {
             open={true}
             onClose={() => setEditingCueLoopsTrackId(null)}
             track={track}
-            onSave={(cueLoops: CueLoop[], customStart?: number, customEnd?: number | null) => {
+            onSave={(cueLoops: CueLoop[], customStart?: number, customEnd?: number | null, alias?: string) => {
               updateTrack(activeScene.id, track.id, {
                 cueLoops,
                 ...(customStart !== undefined && { customStart }),
                 ...(customEnd !== undefined && { customEnd }),
+                ...(alias !== undefined && { alias }),
               });
               setCueLoops(track.id, cueLoops);
+              // Trigger seek cooldown for safe editing during playback
+              const triggerSeekCooldown = usePlaybackStore.getState?.()?.triggerSeekCooldown;
+              triggerSeekCooldown?.(track.id);
             }}
           />
         );

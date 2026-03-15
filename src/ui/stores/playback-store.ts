@@ -13,6 +13,7 @@ import {
   breakCueLoop as breakCueLoopEngine,
   resetCueLoops,
   getActiveCueLoopIndex,
+  getCueLoopState,
 } from '@infrastructure/soundcloud/cue-loop-engine';
 import type { CueLoop } from '@domain/models/cue-loop';
 
@@ -22,6 +23,7 @@ export type TrackPlaybackInfo = {
   relativePosition: number;
   metadata: TrackMetadata | null;
   activeCueLoopIndex: number;
+  brokenCueLoopIndices: ReadonlySet<number>;
 };
 
 export type PlaybackState = {
@@ -42,6 +44,7 @@ export type PlaybackState = {
   fadeOut: (trackId: string, durationMs: number, pauseAfter?: boolean) => void;
   setCueLoops: (trackId: string, cueLoops: readonly CueLoop[]) => void;
   breakCueLoop: (trackId: string) => void;
+  triggerSeekCooldown: (trackId: string) => void;
   panic: () => void;
   unloadTrack: (trackId: string) => void;
   getTrackState: (trackId: string) => TrackPlaybackState;
@@ -65,7 +68,7 @@ export function createPlaybackStore() {
             tracks: {
               ...prev.tracks,
               [trackId]: {
-                ...(prev.tracks[trackId] ?? { positionMs: 0, relativePosition: 0, metadata: null, activeCueLoopIndex: -1 }),
+                ...(prev.tracks[trackId] ?? { positionMs: 0, relativePosition: 0, metadata: null, activeCueLoopIndex: -1, brokenCueLoopIndices: new Set() }),
                 state,
               },
             },
@@ -76,20 +79,44 @@ export function createPlaybackStore() {
           if (get().seekCooldowns.has(trackId)) return;
 
           // Check cue loop boundaries
-          const { player } = get();
+          const { player, seekCooldowns } = get();
           let activeCueIdx = -1;
           if (player) {
-            activeCueIdx = checkCueLoopBoundary(trackId, positionMs, player);
+            const result = checkCueLoopBoundary(trackId, positionMs, player);
+            activeCueIdx = result.activeCueLoopIndex;
+
+            // If the cue loop engine performed a seek, apply seek cooldown
+            if (result.didSeek) {
+              seekCooldowns.add(trackId);
+              setTimeout(() => { get().seekCooldowns.delete(trackId); }, 800);
+              // Snap position to cue loop start immediately
+              set((prev) => ({
+                tracks: {
+                  ...prev.tracks,
+                  [trackId]: {
+                    ...prev.tracks[trackId],
+                    positionMs: result.seekTarget,
+                    relativePosition: (prev.tracks[trackId]?.metadata?.duration ?? 1) > 0
+                      ? result.seekTarget / (prev.tracks[trackId]?.metadata?.duration ?? 1)
+                      : 0,
+                    activeCueLoopIndex: activeCueIdx,
+                    brokenCueLoopIndices: getCueLoopState(trackId)?.broken ?? new Set(),
+                  },
+                },
+              }));
+              return; // Skip the normal position update
+            }
           }
 
           set((prev) => ({
             tracks: {
               ...prev.tracks,
               [trackId]: {
-                ...(prev.tracks[trackId] ?? { state: 'playing' as const, metadata: null, activeCueLoopIndex: -1 }),
+                ...(prev.tracks[trackId] ?? { state: 'playing' as const, metadata: null, activeCueLoopIndex: -1, brokenCueLoopIndices: new Set() }),
                 positionMs,
                 relativePosition,
                 activeCueLoopIndex: activeCueIdx,
+                brokenCueLoopIndices: getCueLoopState(trackId)?.broken ?? new Set(),
               },
             },
           }));
@@ -99,7 +126,7 @@ export function createPlaybackStore() {
             tracks: {
               ...prev.tracks,
               [trackId]: {
-                ...(prev.tracks[trackId] ?? { metadata: null, activeCueLoopIndex: -1 }),
+                ...(prev.tracks[trackId] ?? { metadata: null, activeCueLoopIndex: -1, brokenCueLoopIndices: new Set() }),
                 state: 'stopped' as const,
                 positionMs: 0,
                 relativePosition: 0,
@@ -125,7 +152,7 @@ export function createPlaybackStore() {
             tracks: {
               ...prev.tracks,
               [trackId]: {
-                ...(prev.tracks[trackId] ?? { positionMs: 0, relativePosition: 0, metadata: null, activeCueLoopIndex: -1 }),
+                ...(prev.tracks[trackId] ?? { positionMs: 0, relativePosition: 0, metadata: null, activeCueLoopIndex: -1, brokenCueLoopIndices: new Set() }),
                 state: 'error' as const,
               },
             },
@@ -143,7 +170,7 @@ export function createPlaybackStore() {
       set((prev) => ({
         tracks: {
           ...prev.tracks,
-          [trackId]: { state: 'loading', positionMs: 0, relativePosition: 0, metadata: null, activeCueLoopIndex: -1 },
+          [trackId]: { state: 'loading', positionMs: 0, relativePosition: 0, metadata: null, activeCueLoopIndex: -1, brokenCueLoopIndices: new Set() },
         },
       }));
 
@@ -154,7 +181,7 @@ export function createPlaybackStore() {
         set((prev) => ({
           tracks: {
             ...prev.tracks,
-            [trackId]: { state: 'error', positionMs: 0, relativePosition: 0, metadata: null, activeCueLoopIndex: -1 },
+            [trackId]: { state: 'error', positionMs: 0, relativePosition: 0, metadata: null, activeCueLoopIndex: -1, brokenCueLoopIndices: new Set() },
           },
         }));
         return null;
@@ -218,6 +245,12 @@ export function createPlaybackStore() {
       });
     },
 
+    triggerSeekCooldown: (trackId) => {
+      const { seekCooldowns } = get();
+      seekCooldowns.add(trackId);
+      setTimeout(() => { get().seekCooldowns.delete(trackId); }, 800);
+    },
+
     setCueLoops: (trackId, cueLoops) => {
       initCueLoops(trackId, cueLoops);
     },
@@ -231,6 +264,7 @@ export function createPlaybackStore() {
             [trackId]: {
               ...prev.tracks[trackId],
               activeCueLoopIndex: -1,
+              brokenCueLoopIndices: getCueLoopState(trackId)?.broken ?? new Set(),
             },
           },
         }));

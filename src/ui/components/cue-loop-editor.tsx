@@ -10,7 +10,7 @@ type CueLoopEditorProps = {
   open: boolean;
   onClose: () => void;
   track: Track;
-  onSave: (cueLoops: CueLoop[], customStart?: number, customEnd?: number | null) => void;
+  onSave: (cueLoops: CueLoop[], customStart?: number, customEnd?: number | null, alias?: string) => void;
 };
 
 function formatTime(ms: number): string {
@@ -30,6 +30,7 @@ function parseTime(str: string): number | null {
 }
 
 export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorProps) {
+  const [alias, setAlias] = useState(track.alias ?? '');
   const [customStartStr, setCustomStartStr] = useState(
     track.customStart > 0 ? formatTime(track.customStart) : '',
   );
@@ -90,7 +91,7 @@ export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorPro
 
     const customStart = parseTime(customStartStr) ?? 0;
     const customEnd = customEndStr ? (parseTime(customEndStr) ?? null) : null;
-    onSave(filtered, customStart, customEnd);
+    onSave(filtered, customStart, customEnd, alias);
     onClose();
   };
 
@@ -103,6 +104,20 @@ export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorPro
           Track duration: {durationStr}
         </p>
 
+        {/* GM Alias */}
+        <div>
+          <label className="block text-xs text-[var(--color-base-400)] uppercase tracking-wider mb-2">
+            GM Alias / Label
+          </label>
+          <input
+            type="text"
+            value={alias}
+            onChange={(e) => setAlias(e.target.value)}
+            placeholder="e.g., Combat theme, Rain ambience"
+            className="w-full px-2 py-1 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-xs text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
+          />
+        </div>
+
         {/* Custom start/end points */}
         <div>
           <label className="block text-xs text-[var(--color-base-400)] uppercase tracking-wider mb-2">
@@ -114,7 +129,7 @@ export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorPro
               value={customStartStr}
               onChange={(e) => setCustomStartStr(e.target.value)}
               placeholder="0:00"
-              className="w-16 px-2 py-1 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-xs text-center text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
+              className="w-16 px-2 py-1 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-xs text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
             />
             <span className="text-xs text-[var(--color-base-500)]">→</span>
             <input
@@ -122,7 +137,7 @@ export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorPro
               value={customEndStr}
               onChange={(e) => setCustomEndStr(e.target.value)}
               placeholder={durationStr}
-              className="w-16 px-2 py-1 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-xs text-center text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
+              className="w-16 px-2 py-1 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-xs text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
             />
             <span className="text-[10px] text-[var(--color-base-600)]">(leave empty for full track)</span>
           </div>
@@ -138,32 +153,53 @@ export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorPro
         </div>
 
         <div className="space-y-2">
-          {loops.map((loop, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <span className="text-xs text-[var(--color-base-500)] w-6">#{index + 1}</span>
-              <input
-                type="text"
-                value={loop.startStr}
-                onChange={(e) => updateLoop(index, 'startStr', e.target.value)}
-                placeholder="0:00"
-                className="w-16 px-2 py-1 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-xs text-center text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
-              />
-              <span className="text-xs text-[var(--color-base-500)]">→</span>
-              <input
-                type="text"
-                value={loop.endStr}
-                onChange={(e) => updateLoop(index, 'endStr', e.target.value)}
-                placeholder="0:30"
-                className="w-16 px-2 py-1 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-xs text-center text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
-              />
-              <button
-                onClick={() => removeLoop(index)}
-                className="text-red-400 hover:text-red-300 text-xs"
-              >
-                ×
-              </button>
+          {loops.map((loop, index) => {
+            const loopStartMs = parseTime(loop.startStr);
+            const loopEndMs = parseTime(loop.endStr);
+            const csMs = parseTime(customStartStr) ?? 0;
+            const ceMs = customEndStr ? parseTime(customEndStr) : null;
+            const outsideRange = (loopStartMs !== null && loopStartMs < csMs) ||
+              (ceMs !== null && loopEndMs !== null && loopEndMs > ceMs);
+            const overlapsNext = index < loops.length - 1 && loopEndMs !== null && (() => {
+              const nextStart = parseTime(loops[index + 1].startStr);
+              return nextStart !== null && loopEndMs > nextStart;
+            })();
+
+            return (
+            <div key={index}>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[var(--color-base-500)] w-6">#{index + 1}</span>
+                <input
+                  type="text"
+                  value={loop.startStr}
+                  onChange={(e) => updateLoop(index, 'startStr', e.target.value)}
+                  placeholder="0:00"
+                  className="w-16 px-2 py-1 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-xs text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
+                />
+                <span className="text-xs text-[var(--color-base-500)]">→</span>
+                <input
+                  type="text"
+                  value={loop.endStr}
+                  onChange={(e) => updateLoop(index, 'endStr', e.target.value)}
+                  placeholder="0:30"
+                  className="w-16 px-2 py-1 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-xs text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
+                />
+                <button
+                  onClick={() => removeLoop(index)}
+                  className="text-red-400 hover:text-red-300 text-xs"
+                >
+                  ×
+                </button>
+              </div>
+              {outsideRange && (
+                <p className="text-[10px] text-amber-400 ml-8 mt-0.5">Outside custom start/end range</p>
+              )}
+              {overlapsNext && (
+                <p className="text-[10px] text-amber-400 ml-8 mt-0.5">Overlaps with next loop — will be removed</p>
+              )}
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <button
@@ -208,7 +244,7 @@ export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorPro
             onClick={handleSave}
             className="px-4 py-2 text-xs bg-[var(--color-accent)] text-white rounded-sm hover:brightness-110 transition-all"
           >
-            Save Cue Loops
+            Save
           </button>
         </div>
       </div>

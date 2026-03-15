@@ -9,10 +9,12 @@ type SceneHeaderProps = {
   onFadeIn: () => void;
   onFadeOut: () => void;
   onUpdateNotes?: (notes: string) => void;
+  onDuckToggle?: () => void;
+  isDucked?: boolean;
   fadeDurationMs?: number;
 };
 
-export function SceneHeader({ scene, onPlayScene, onStopScene, onFadeIn, onFadeOut, onUpdateNotes, fadeDurationMs = 3000 }: SceneHeaderProps) {
+export function SceneHeader({ scene, onPlayScene, onStopScene, onFadeIn, onFadeOut, onUpdateNotes, onDuckToggle, isDucked, fadeDurationMs = 3000 }: SceneHeaderProps) {
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState(scene.notes);
 
@@ -50,6 +52,22 @@ export function SceneHeader({ scene, onPlayScene, onStopScene, onFadeIn, onFadeO
           <div className="w-px h-5 bg-[var(--color-base-700)] mx-1" />
           <TransportButton onClick={onFadeIn} title={`Fade in scene (${(fadeDurationMs / 1000).toFixed(1)}s)`} icon="⏶" />
           <TransportButton onClick={onFadeOut} title={`Fade out scene (${(fadeDurationMs / 1000).toFixed(1)}s)`} icon="⏷" />
+          {onDuckToggle && (
+            <>
+              <div className="w-px h-5 bg-[var(--color-base-700)] mx-1" />
+              <button
+                onClick={onDuckToggle}
+                title="Duck all audio for narration (D key)"
+                className={`w-8 h-8 flex items-center justify-center rounded-sm transition-colors text-xs ${
+                  isDucked
+                    ? 'bg-amber-500/20 text-amber-400'
+                    : 'text-[var(--color-base-400)] hover:text-[var(--color-base-100)] hover:bg-[var(--color-base-700)]'
+                }`}
+              >
+                🎙
+              </button>
+            </>
+          )}
         </div>
       </div>
 

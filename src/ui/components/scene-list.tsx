@@ -10,10 +10,15 @@ type SceneListProps = {
   onDuplicateScene?: (id: string) => void;
   onDeleteScene?: (id: string) => void;
   onMoveScene?: (sceneId: string, direction: 'up' | 'down') => void;
+  onRenameScene?: (id: string, newName: string) => void;
+  onDragScene?: (sceneId: string, targetSceneId: string) => void;
 };
 
-export function SceneList({ scenes, activeSceneId, onSelectScene, onAddScene, onDuplicateScene, onDeleteScene, onMoveScene }: SceneListProps) {
+export function SceneList({ scenes, activeSceneId, onSelectScene, onAddScene, onDuplicateScene, onDeleteScene, onMoveScene, onRenameScene, onDragScene }: SceneListProps) {
   const [contextMenuId, setContextMenuId] = useState<string | null>(null);
+  const [renamingSceneId, setRenamingSceneId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [dragSceneId, setDragSceneId] = useState<string | null>(null);
 
   return (
     <div className="flex flex-col h-full">
@@ -39,9 +44,23 @@ export function SceneList({ scenes, activeSceneId, onSelectScene, onAddScene, on
         {scenes.map((scene) => {
           const isActive = scene.id === activeSceneId;
           return (
-            <div key={scene.id} className="relative">
+            <div
+              key={scene.id}
+              className={`relative ${dragSceneId === scene.id ? 'opacity-40' : ''}`}
+              draggable={!!onDragScene}
+              onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDragSceneId(scene.id); }}
+              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (dragSceneId && dragSceneId !== scene.id) {
+                  onDragScene?.(dragSceneId, scene.id);
+                }
+                setDragSceneId(null);
+              }}
+              onDragEnd={() => setDragSceneId(null)}
+            >
               <button
-                onClick={() => onSelectScene(scene.id)}
+                onClick={() => renamingSceneId === scene.id ? null : onSelectScene(scene.id)}
                 onContextMenu={(e) => {
                   e.preventDefault();
                   setContextMenuId(contextMenuId === scene.id ? null : scene.id);
@@ -60,10 +79,32 @@ export function SceneList({ scenes, activeSceneId, onSelectScene, onAddScene, on
                   className={`w-2 h-2 rounded-full flex-shrink-0 ${isActive ? 'animate-pulse-glow' : ''}`}
                   style={{ backgroundColor: scene.color }}
                 />
-                <span className="text-sm truncate">
-                  {scene.emoji && <span className="mr-1.5">{scene.emoji}</span>}
-                  {scene.name}
-                </span>
+                {renamingSceneId === scene.id ? (
+                  <input
+                    type="text"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    autoFocus
+                    className="text-sm bg-[var(--color-base-800)] border border-[var(--color-base-600)] rounded-sm px-1 text-[var(--color-base-100)] focus:outline-none focus:border-[var(--color-accent)] w-full"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        onRenameScene?.(scene.id, renameValue);
+                        setRenamingSceneId(null);
+                      }
+                      if (e.key === 'Escape') setRenamingSceneId(null);
+                    }}
+                    onBlur={() => {
+                      onRenameScene?.(scene.id, renameValue);
+                      setRenamingSceneId(null);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <span className="text-sm truncate">
+                    {scene.emoji && <span className="mr-1.5">{scene.emoji}</span>}
+                    {scene.name}
+                  </span>
+                )}
                 {isActive && (
                   <div
                     className="ml-auto w-1 h-4 rounded-full"
@@ -92,6 +133,16 @@ export function SceneList({ scenes, activeSceneId, onSelectScene, onAddScene, on
                     Move Down
                   </button>
                   <div className="my-1 border-t border-[var(--color-base-700)]" />
+                  <button
+                    onClick={() => {
+                      setRenameValue(scene.name);
+                      setRenamingSceneId(scene.id);
+                      setContextMenuId(null);
+                    }}
+                    className="w-full text-left px-3 py-1.5 text-xs text-[var(--color-base-200)] hover:bg-[var(--color-base-700)] transition-colors"
+                  >
+                    Rename
+                  </button>
                   <button
                     onClick={() => { onDuplicateScene?.(scene.id); setContextMenuId(null); }}
                     className="w-full text-left px-3 py-1.5 text-xs text-[var(--color-base-200)] hover:bg-[var(--color-base-700)] transition-colors"

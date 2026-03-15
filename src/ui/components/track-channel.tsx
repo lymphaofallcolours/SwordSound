@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import type { Track } from '@domain/models/track';
 import type { TrackPlaybackInfo } from '@ui/stores/playback-store';
 
@@ -17,8 +19,12 @@ type TrackChannelProps = {
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   onDragStart?: () => void;
+  onDragEnd?: () => void;
   onDragOver?: (e: React.DragEvent) => void;
   onDrop?: () => void;
+  onCopy?: () => void;
+  onDuplicate?: () => void;
+  onAutoPlayToggle?: () => void;
   isFirst?: boolean;
   isLast?: boolean;
   isDragging?: boolean;
@@ -40,12 +46,18 @@ export function TrackChannel({
   onMoveUp,
   onMoveDown,
   onDragStart,
+  onDragEnd,
   onDragOver,
   onDrop,
+  onCopy,
+  onDuplicate,
+  onAutoPlayToggle,
   isFirst,
   isLast,
   isDragging,
 }: TrackChannelProps) {
+  const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const [hoverTime, setHoverTime] = useState<string | null>(null);
   const state = playbackInfo?.state ?? 'stopped';
   const isPlaying = state === 'playing';
   const isLoading = state === 'loading';
@@ -56,6 +68,16 @@ export function TrackChannel({
   const displayArtist = playbackInfo?.metadata?.artist ?? track.artist;
   const activeCueLoop = playbackInfo?.activeCueLoopIndex ?? -1;
   const isInCueLoop = activeCueLoop >= 0;
+  const brokenCueLoops = playbackInfo?.brokenCueLoopIndices ?? new Set<number>();
+  const positionMs = playbackInfo?.positionMs ?? 0;
+  const durationMs = playbackInfo?.metadata?.duration ?? track.duration;
+
+  const formatTime = (ms: number) => {
+    const totalSec = Math.floor(ms / 1000);
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    return `${min}:${sec.toString().padStart(2, '0')}`;
+  };
 
   const statusColor = isError
     ? 'var(--color-panic)'
@@ -69,11 +91,17 @@ export function TrackChannel({
 
   return (
     <div
-      draggable={!!onDragStart}
-      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; onDragStart?.(); }}
+      draggable={!!onDragStart && !contextMenuPos}
+      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setContextMenuPos(null); onDragStart?.(); }}
+      onDragEnd={() => onDragEnd?.()}
       onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; onDragOver?.(e); }}
       onDrop={(e) => { e.preventDefault(); onDrop?.(); }}
-      className={`group flex items-center gap-3 hover:bg-[var(--color-base-850)] transition-colors border-b border-[var(--color-base-800)]/50 ${isDragging ? 'opacity-40' : ''}`}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        const rect = e.currentTarget.getBoundingClientRect();
+        setContextMenuPos(contextMenuPos ? null : { x: e.clientX - rect.left, y: e.clientY - rect.top });
+      }}
+      className={`group flex items-center gap-3 hover:bg-[var(--color-base-850)] transition-colors border-b border-[var(--color-base-800)]/50 relative ${isDragging ? 'opacity-40' : ''}`}
       style={{ padding: 'var(--spacing-track)', minHeight: 'var(--track-height)' }}
     >
       {/* Status indicator */}
@@ -103,6 +131,11 @@ export function TrackChannel({
 
       {/* Track info */}
       <div className="flex-1 min-w-0">
+        {track.alias && (
+          <span className="text-amber-400 font-medium truncate block" style={{ fontSize: 'var(--text-xxs)' }}>
+            {track.alias}
+          </span>
+        )}
         <div className="flex items-center gap-2">
           <span className="font-medium text-[var(--color-base-100)] truncate" style={{ fontSize: 'var(--text-sm)' }}>
             {displayTitle}
@@ -119,38 +152,78 @@ export function TrackChannel({
           {track.loopEnabled && (
             <Badge color="purple" text="loop" />
           )}
+          {track.autoPlay && (
+            <Badge color="green" text="auto" />
+          )}
         </div>
         <span className="text-[var(--color-base-500)] truncate block" style={{ fontSize: 'var(--text-xs)' }}>
           {displayArtist}
         </span>
       </div>
 
-      {/* Timeline bar — click to seek, shows cue loop markers */}
-      <div
-        className="w-32 h-3 timeline-track flex-shrink-0 hidden lg:block cursor-pointer relative"
-        onClick={(e) => {
-          if (!onSeek || !track.duration) return;
-          const rect = e.currentTarget.getBoundingClientRect();
-          const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-          onSeek(Math.round(fraction * track.duration));
-        }}
-        title="Click to seek"
-      >
-        {/* Cue loop region markers */}
-        {track.cueLoops.map((cl, i) => {
-          if (!track.duration) return null;
-          const left = (cl.startPosition / track.duration) * 100;
-          const width = ((cl.endPosition - cl.startPosition) / track.duration) * 100;
-          const isActive = i === activeCueLoop;
-          return (
+      {/* Timeline + time display */}
+      <div className="flex-shrink-0 hidden lg:flex flex-col gap-0.5 w-36">
+        <div
+          className="h-3 timeline-track cursor-pointer relative group/tl"
+          onClick={(e) => {
+            if (!onSeek || !durationMs) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            let targetMs = Math.round(fraction * durationMs);
+            // Clamp to custom range
+            if (track.customStart > 0 && targetMs < track.customStart) targetMs = track.customStart as number;
+            if (track.customEnd && targetMs > (track.customEnd as number)) targetMs = track.customEnd as number;
+            onSeek(targetMs);
+          }}
+          onMouseMove={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            setHoverTime(formatTime(Math.round(fraction * durationMs)));
+          }}
+          onMouseLeave={() => setHoverTime(null)}
+        >
+          {/* Custom start/end indicators */}
+          {track.customStart > 0 && durationMs > 0 && (
             <div
-              key={cl.id}
-              className={`absolute top-0 h-full ${isActive ? 'bg-cyan-400/40' : 'bg-cyan-500/20'} border-x border-cyan-400/30`}
-              style={{ left: `${left}%`, width: `${width}%` }}
+              className="absolute top-0 h-full bg-[var(--color-base-600)]/40"
+              style={{ left: 0, width: `${(track.customStart / durationMs) * 100}%` }}
             />
-          );
-        })}
-        <div className="timeline-progress h-full transition-[width] duration-300 relative z-10" style={{ width: `${progress}%` }} />
+          )}
+          {track.customEnd && durationMs > 0 && (
+            <div
+              className="absolute top-0 h-full bg-[var(--color-base-600)]/40"
+              style={{ left: `${((track.customEnd as number) / durationMs) * 100}%`, right: 0, width: 'auto' }}
+            />
+          )}
+          {/* Cue loop region markers — colored by state */}
+          {track.cueLoops.map((cl, i) => {
+            if (!durationMs) return null;
+            const left = (cl.startPosition / durationMs) * 100;
+            const width = ((cl.endPosition - cl.startPosition) / durationMs) * 100;
+            const isBroken = brokenCueLoops.has(i);
+            const isActive = i === activeCueLoop;
+            const colorClass = isBroken
+              ? 'bg-[var(--color-base-600)]/30 border-[var(--color-base-600)]/40'
+              : isActive
+                ? 'bg-emerald-400/40 border-emerald-400/50'
+                : 'bg-cyan-500/20 border-cyan-400/30';
+            return (
+              <div
+                key={cl.id}
+                className={`absolute top-0 h-full border-x ${colorClass}`}
+                style={{ left: `${left}%`, width: `${width}%` }}
+              />
+            );
+          })}
+          <div className="timeline-progress h-full transition-[width] duration-200 relative z-10" style={{ width: `${progress}%` }} />
+        </div>
+        {/* Time display — shows hover time or current/total */}
+        <div className="flex justify-between tabular-nums" style={{ fontSize: 'var(--text-xxs)' }}>
+          <span className="text-[var(--color-base-400)]">
+            {hoverTime ? <span className="text-[var(--color-accent)]">{hoverTime}</span> : formatTime(positionMs)}
+          </span>
+          <span className="text-[var(--color-base-600)]">{formatTime(durationMs)}</span>
+        </div>
       </div>
 
       {/* Volume */}
@@ -221,6 +294,35 @@ export function TrackChannel({
       >
         ×
       </button>
+
+      {/* Right-click context menu */}
+      {contextMenuPos && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setContextMenuPos(null)} />
+          <div
+            className="absolute z-20 bg-[var(--color-base-800)] border border-[var(--color-base-600)] rounded-sm shadow-lg py-1 min-w-[160px]"
+            style={{ left: contextMenuPos.x, top: contextMenuPos.y }}
+          >
+            {onCopy && (
+              <CtxMenuItem label="Copy to Clipboard" onClick={() => { onCopy(); setContextMenuPos(null); }} />
+            )}
+            {onDuplicate && (
+              <CtxMenuItem label="Duplicate in Scene" onClick={() => { onDuplicate(); setContextMenuPos(null); }} />
+            )}
+            {onEditCueLoops && (
+              <CtxMenuItem label="Track Editor..." onClick={() => { onEditCueLoops(); setContextMenuPos(null); }} />
+            )}
+            {onAutoPlayToggle && (
+              <CtxMenuItem
+                label={track.autoPlay ? '✓ Auto-Play on Scene Switch' : '  Auto-Play on Scene Switch'}
+                onClick={() => { onAutoPlayToggle(); setContextMenuPos(null); }}
+              />
+            )}
+            <div className="my-1 border-t border-[var(--color-base-700)]" />
+            <CtxMenuItem label="Remove" onClick={() => { onRemove(); setContextMenuPos(null); }} danger />
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -263,6 +365,7 @@ function Badge({ color, text, pulse }: { color: string; text: string; pulse?: bo
     amber: 'bg-amber-500/20 text-amber-400',
     purple: 'bg-purple-500/20 text-purple-400',
     cyan: 'bg-cyan-500/20 text-cyan-400',
+    green: 'bg-emerald-500/20 text-emerald-400',
   };
 
   return (
@@ -272,5 +375,18 @@ function Badge({ color, text, pulse }: { color: string; text: string; pulse?: bo
     >
       {text}
     </span>
+  );
+}
+
+function CtxMenuItem({ label, onClick, danger }: { label: string; onClick: () => void; danger?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full text-left px-3 py-1.5 text-xs hover:bg-[var(--color-base-700)] transition-colors ${
+        danger ? 'text-red-400' : 'text-[var(--color-base-200)]'
+      }`}
+    >
+      {label}
+    </button>
   );
 }

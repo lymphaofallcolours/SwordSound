@@ -48,6 +48,7 @@ export type SessionState = {
 
   addOneShotTrack: (track: Track) => void;
   removeOneShotTrack: (trackId: string) => void;
+  updateOneShotTrack: (trackId: string, changes: Partial<Track>) => void;
 };
 
 const ONESHOTS_KEY = 'swordsound-oneshots';
@@ -209,6 +210,16 @@ export function createSessionStore(persistence: PersistencePort) {
     removeOneShotTrack: (trackId: string) => {
       set((prev) => {
         const updated = prev.oneShotTracks.filter((t) => t.id !== trackId);
+        saveOneShotsToStorage(updated);
+        return { oneShotTracks: updated };
+      });
+    },
+
+    updateOneShotTrack: (trackId: string, changes: Partial<Track>) => {
+      set((prev) => {
+        const updated = prev.oneShotTracks.map((t) =>
+          t.id === trackId ? { ...t, ...changes } : t,
+        );
         saveOneShotsToStorage(updated);
         return { oneShotTracks: updated };
       });

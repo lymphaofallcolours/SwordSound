@@ -27,13 +27,20 @@ export function clearCueLoops(trackId: string): void {
  * Called on every PLAY_PROGRESS event. Checks if we've hit a cue loop boundary
  * and should loop back. Returns the index of the active cue loop, or -1.
  */
+export type CueLoopCheckResult = {
+  activeCueLoopIndex: number;
+  didSeek: boolean;
+  seekTarget: number;
+};
+
 export function checkCueLoopBoundary(
   trackId: string,
   positionMs: number,
   player: SoundCloudPlayer,
-): number {
+): CueLoopCheckResult {
+  const noAction: CueLoopCheckResult = { activeCueLoopIndex: -1, didSeek: false, seekTarget: 0 };
   const state = trackCueStates.get(trackId);
-  if (!state || state.cueLoops.length === 0) return -1;
+  if (!state || state.cueLoops.length === 0) return noAction;
 
   // If track looped back to start, reset all cue loops
   if (positionMs < 2000 && state.broken.size > 0) {
@@ -51,29 +58,31 @@ export function checkCueLoopBoundary(
 
     // At or past the cue loop's end — seek back (with debounce)
     if (positionMs >= cueLoop.endPosition - 500) {
+      let didSeek = false;
       if (now - state.lastSeekTime > 600) {
         player.seekTo(trackId, cueLoop.startPosition);
         state.lastSeekTime = now;
+        didSeek = true;
       }
       state.activeCueLoopIndex = i;
-      return i;
+      return { activeCueLoopIndex: i, didSeek, seekTarget: cueLoop.startPosition };
     }
 
     // Haven't reached this cue loop's start yet — playing freely before it
     if (positionMs < cueLoop.startPosition) {
       state.activeCueLoopIndex = -1;
-      return -1;
+      return noAction;
     }
 
     // Inside this cue loop's range but not at the end yet
     if (positionMs >= cueLoop.startPosition && positionMs < cueLoop.endPosition - 500) {
       state.activeCueLoopIndex = i;
-      return i;
+      return { activeCueLoopIndex: i, didSeek: false, seekTarget: 0 };
     }
   }
 
   state.activeCueLoopIndex = -1;
-  return -1;
+  return noAction;
 }
 
 /**

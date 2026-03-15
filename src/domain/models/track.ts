@@ -26,6 +26,7 @@ export type Track = {
   readonly groupId: string | null;
   readonly isOneShot: boolean;
   readonly autoPlay: boolean;
+  readonly alias: string;
 };
 
 type CreateTrackInput = {
@@ -45,6 +46,7 @@ type CreateTrackInput = {
   groupId?: string | null;
   isOneShot?: boolean;
   autoPlay?: boolean;
+  alias?: string;
 };
 
 export function createTrack(input: CreateTrackInput): Track {
@@ -73,5 +75,6 @@ export function createTrack(input: CreateTrackInput): Track {
     groupId: input.groupId ?? null,
     isOneShot: input.isOneShot ?? false,
     autoPlay: input.autoPlay ?? false,
+    alias: input.alias ?? '',
   };
 }
