@@ -12,7 +12,9 @@ import { AddTrackDialog } from '@ui/components/add-track-dialog';
 import { SettingsPanel } from '@ui/components/settings-panel';
 import { OneShotPalette } from '@ui/components/oneshot-palette';
 import { AttributionPanel } from '@ui/components/attribution-panel';
+import { CueLoopEditor } from '@ui/components/cue-loop-editor';
 import { createTrack } from '@domain/models/track';
+import type { CueLoop } from '@domain/models/cue-loop';
 
 export function App() {
   const currentSession = useSessionStore((s) => s.currentSession);
@@ -41,6 +43,8 @@ export function App() {
   const stopTrack = usePlaybackStore((s) => s.stop);
   const setTrackVolume = usePlaybackStore((s) => s.setVolume);
   const seekTrack = usePlaybackStore((s) => s.seekTo);
+  const setCueLoops = usePlaybackStore((s) => s.setCueLoops);
+  const breakCueLoop = usePlaybackStore((s) => s.breakCueLoop);
   const fadeInTrack = usePlaybackStore((s) => s.fadeIn);
   const fadeOutTrack = usePlaybackStore((s) => s.fadeOut);
   const panic = usePlaybackStore((s) => s.panic);
@@ -67,6 +71,7 @@ export function App() {
   const [showAddOneShot, setShowAddOneShot] = useState(false);
   const [showAttribution, setShowAttribution] = useState(false);
   const [dragTrackId, setDragTrackId] = useState<string | null>(null);
+  const [editingCueLoopsTrackId, setEditingCueLoopsTrackId] = useState<string | null>(null);
 
   // Initialize playback engine
   useEffect(() => {
@@ -147,19 +152,22 @@ export function App() {
       if (!tracks[trackId] || tracks[trackId].state === 'error') {
         await loadTrackToPlayer(trackId, soundcloudUrl);
       }
-      // Restore configured volume before playing
+      // Restore configured volume and initialize cue loops
       if (currentSession) {
         for (const scene of currentSession.scenes) {
           const track = scene.tracks.find((t) => t.id === trackId);
           if (track) {
             setTrackVolume(trackId, track.muted ? 0 : track.volume);
+            if (track.cueLoops.length > 0) {
+              setCueLoops(trackId, track.cueLoops);
+            }
             break;
           }
         }
       }
       playTrack(trackId);
     },
-    [tracks, loadTrackToPlayer, playTrack, setTrackVolume, currentSession],
+    [tracks, loadTrackToPlayer, playTrack, setTrackVolume, setCueLoops, currentSession],
   );
 
   const handleVolumeChange = useCallback(
@@ -488,6 +496,8 @@ export function App() {
                     onLoopToggle={() => updateTrack(activeScene.id, track.id, { loopEnabled: !track.loopEnabled })}
                     onRemove={() => handleRemoveTrack(activeScene.id, track.id)}
                     onSeek={(posMs) => seekTrack(track.id, posMs)}
+                    onBreakCueLoop={track.cueLoops.length > 0 ? () => breakCueLoop(track.id) : undefined}
+                    onEditCueLoops={() => setEditingCueLoopsTrackId(track.id)}
                     onMoveUp={() => moveTrack(activeScene.id, track.id, 'up')}
                     onMoveDown={() => moveTrack(activeScene.id, track.id, 'down')}
                     onDragStart={() => setDragTrackId(track.id)}
@@ -552,6 +562,21 @@ export function App() {
         onClose={() => setShowAddOneShot(false)}
         onConfirm={handleAddOneShot}
       />
+      {editingCueLoopsTrackId && activeScene && (() => {
+        const track = activeScene.tracks.find((t) => t.id === editingCueLoopsTrackId);
+        if (!track) return null;
+        return (
+          <CueLoopEditor
+            open={true}
+            onClose={() => setEditingCueLoopsTrackId(null)}
+            track={track}
+            onSave={(cueLoops: CueLoop[]) => {
+              updateTrack(activeScene.id, track.id, { cueLoops });
+              setCueLoops(track.id, cueLoops);
+            }}
+          />
+        );
+      })()}
       <SettingsPanel
         open={showSettings}
         onClose={toggleSettings}

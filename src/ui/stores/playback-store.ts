@@ -7,12 +7,21 @@ import {
   type TrackMetadata,
 } from '@infrastructure/soundcloud/soundcloud-widget';
 import { fadeTrack, cancelAllFades } from '@infrastructure/soundcloud/fade-engine';
+import {
+  checkCueLoopBoundary,
+  initCueLoops,
+  breakCueLoop as breakCueLoopEngine,
+  resetCueLoops,
+  getActiveCueLoopIndex,
+} from '@infrastructure/soundcloud/cue-loop-engine';
+import type { CueLoop } from '@domain/models/cue-loop';
 
 export type TrackPlaybackInfo = {
   state: TrackPlaybackState;
   positionMs: number;
   relativePosition: number;
   metadata: TrackMetadata | null;
+  activeCueLoopIndex: number;
 };
 
 export type PlaybackState = {
@@ -31,6 +40,8 @@ export type PlaybackState = {
   seekTo: (trackId: string, positionMs: number) => void;
   fadeIn: (trackId: string, targetVolume: number, durationMs: number) => void;
   fadeOut: (trackId: string, durationMs: number, pauseAfter?: boolean) => void;
+  setCueLoops: (trackId: string, cueLoops: readonly CueLoop[]) => void;
+  breakCueLoop: (trackId: string) => void;
   panic: () => void;
   unloadTrack: (trackId: string) => void;
   getTrackState: (trackId: string) => TrackPlaybackState;
@@ -54,7 +65,7 @@ export function createPlaybackStore() {
             tracks: {
               ...prev.tracks,
               [trackId]: {
-                ...(prev.tracks[trackId] ?? { positionMs: 0, relativePosition: 0, metadata: null }),
+                ...(prev.tracks[trackId] ?? { positionMs: 0, relativePosition: 0, metadata: null, activeCueLoopIndex: -1 }),
                 state,
               },
             },
@@ -63,13 +74,22 @@ export function createPlaybackStore() {
         onProgress: (trackId, positionMs, relativePosition) => {
           // Skip progress updates during seek cooldown
           if (get().seekCooldowns.has(trackId)) return;
+
+          // Check cue loop boundaries
+          const { player } = get();
+          let activeCueIdx = -1;
+          if (player) {
+            activeCueIdx = checkCueLoopBoundary(trackId, positionMs, player);
+          }
+
           set((prev) => ({
             tracks: {
               ...prev.tracks,
               [trackId]: {
-                ...(prev.tracks[trackId] ?? { state: 'playing' as const, metadata: null }),
+                ...(prev.tracks[trackId] ?? { state: 'playing' as const, metadata: null, activeCueLoopIndex: -1 }),
                 positionMs,
                 relativePosition,
+                activeCueLoopIndex: activeCueIdx,
               },
             },
           }));
@@ -79,7 +99,7 @@ export function createPlaybackStore() {
             tracks: {
               ...prev.tracks,
               [trackId]: {
-                ...(prev.tracks[trackId] ?? { metadata: null }),
+                ...(prev.tracks[trackId] ?? { metadata: null, activeCueLoopIndex: -1 }),
                 state: 'stopped' as const,
                 positionMs: 0,
                 relativePosition: 0,
@@ -105,7 +125,7 @@ export function createPlaybackStore() {
             tracks: {
               ...prev.tracks,
               [trackId]: {
-                ...(prev.tracks[trackId] ?? { positionMs: 0, relativePosition: 0, metadata: null }),
+                ...(prev.tracks[trackId] ?? { positionMs: 0, relativePosition: 0, metadata: null, activeCueLoopIndex: -1 }),
                 state: 'error' as const,
               },
             },
@@ -123,7 +143,7 @@ export function createPlaybackStore() {
       set((prev) => ({
         tracks: {
           ...prev.tracks,
-          [trackId]: { state: 'loading', positionMs: 0, relativePosition: 0, metadata: null },
+          [trackId]: { state: 'loading', positionMs: 0, relativePosition: 0, metadata: null, activeCueLoopIndex: -1 },
         },
       }));
 
@@ -134,7 +154,7 @@ export function createPlaybackStore() {
         set((prev) => ({
           tracks: {
             ...prev.tracks,
-            [trackId]: { state: 'error', positionMs: 0, relativePosition: 0, metadata: null },
+            [trackId]: { state: 'error', positionMs: 0, relativePosition: 0, metadata: null, activeCueLoopIndex: -1 },
           },
         }));
         return null;
@@ -196,6 +216,25 @@ export function createPlaybackStore() {
           if (pauseAfter) player.pause(trackId);
         },
       });
+    },
+
+    setCueLoops: (trackId, cueLoops) => {
+      initCueLoops(trackId, cueLoops);
+    },
+
+    breakCueLoop: (trackId) => {
+      const broken = breakCueLoopEngine(trackId);
+      if (broken >= 0) {
+        set((prev) => ({
+          tracks: {
+            ...prev.tracks,
+            [trackId]: {
+              ...prev.tracks[trackId],
+              activeCueLoopIndex: -1,
+            },
+          },
+        }));
+      }
     },
 
     panic: () => {

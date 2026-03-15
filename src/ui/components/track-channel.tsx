@@ -12,6 +12,8 @@ type TrackChannelProps = {
   onLoopToggle: () => void;
   onRemove: () => void;
   onSeek?: (positionMs: number) => void;
+  onBreakCueLoop?: () => void;
+  onEditCueLoops?: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
   onDragStart?: () => void;
@@ -33,6 +35,8 @@ export function TrackChannel({
   onLoopToggle,
   onRemove,
   onSeek,
+  onBreakCueLoop,
+  onEditCueLoops,
   onMoveUp,
   onMoveDown,
   onDragStart,
@@ -50,6 +54,8 @@ export function TrackChannel({
 
   const displayTitle = playbackInfo?.metadata?.title ?? track.title;
   const displayArtist = playbackInfo?.metadata?.artist ?? track.artist;
+  const activeCueLoop = playbackInfo?.activeCueLoopIndex ?? -1;
+  const isInCueLoop = activeCueLoop >= 0;
 
   const statusColor = isError
     ? 'var(--color-panic)'
@@ -84,6 +90,15 @@ export function TrackChannel({
           <ScaleButton onClick={onPlay} title="Play" icon="▶" disabled={isLoading} />
         )}
         <ScaleButton onClick={onStop} title="Stop" icon="◼" />
+        {isInCueLoop && onBreakCueLoop && (
+          <ScaleButton
+            onClick={onBreakCueLoop}
+            title={`Break cue loop ${activeCueLoop + 1}`}
+            icon="⏭"
+            active
+            activeColor="cyan"
+          />
+        )}
       </div>
 
       {/* Track info */}
@@ -110,9 +125,9 @@ export function TrackChannel({
         </span>
       </div>
 
-      {/* Timeline bar — click to seek */}
+      {/* Timeline bar — click to seek, shows cue loop markers */}
       <div
-        className="w-32 h-3 timeline-track flex-shrink-0 hidden lg:block cursor-pointer relative group/timeline"
+        className="w-32 h-3 timeline-track flex-shrink-0 hidden lg:block cursor-pointer relative"
         onClick={(e) => {
           if (!onSeek || !track.duration) return;
           const rect = e.currentTarget.getBoundingClientRect();
@@ -121,7 +136,21 @@ export function TrackChannel({
         }}
         title="Click to seek"
       >
-        <div className="timeline-progress h-full transition-[width] duration-300" style={{ width: `${progress}%` }} />
+        {/* Cue loop region markers */}
+        {track.cueLoops.map((cl, i) => {
+          if (!track.duration) return null;
+          const left = (cl.startPosition / track.duration) * 100;
+          const width = ((cl.endPosition - cl.startPosition) / track.duration) * 100;
+          const isActive = i === activeCueLoop;
+          return (
+            <div
+              key={cl.id}
+              className={`absolute top-0 h-full ${isActive ? 'bg-cyan-400/40' : 'bg-cyan-500/20'} border-x border-cyan-400/30`}
+              style={{ left: `${left}%`, width: `${width}%` }}
+            />
+          );
+        })}
+        <div className="timeline-progress h-full transition-[width] duration-300 relative z-10" style={{ width: `${progress}%` }} />
       </div>
 
       {/* Volume */}
@@ -147,7 +176,7 @@ export function TrackChannel({
         </span>
       </div>
 
-      {/* Loop toggle */}
+      {/* Loop toggle + Cue loop editor */}
       <ScaleButton
         onClick={onLoopToggle}
         title={track.loopEnabled ? 'Disable loop' : 'Enable loop'}
@@ -155,6 +184,15 @@ export function TrackChannel({
         active={track.loopEnabled}
         activeColor="purple"
       />
+      {onEditCueLoops && (
+        <ScaleButton
+          onClick={onEditCueLoops}
+          title={`Cue loops (${track.cueLoops.length})`}
+          icon="⚑"
+          active={track.cueLoops.length > 0}
+          activeColor="cyan"
+        />
+      )}
 
       {/* Reorder + Remove */}
       <div className="flex flex-col opacity-0 group-hover:opacity-100 transition-all">
@@ -200,7 +238,9 @@ function ScaleButton({ onClick, title, icon, disabled, active, activeColor }: {
       ? 'text-red-400 bg-red-400/10'
       : activeColor === 'purple'
         ? 'text-[var(--color-looping)] bg-purple-400/10'
-        : 'text-[var(--color-accent)] bg-[var(--color-accent-dim)]'
+        : activeColor === 'cyan'
+          ? 'text-cyan-400 bg-cyan-400/10'
+          : 'text-[var(--color-accent)] bg-[var(--color-accent-dim)]'
     : 'text-[var(--color-base-400)] hover:text-[var(--color-base-100)] hover:bg-[var(--color-base-700)]';
 
   return (
