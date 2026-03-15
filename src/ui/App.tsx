@@ -11,6 +11,7 @@ import { AddSceneDialog } from '@ui/components/add-scene-dialog';
 import { AddTrackDialog } from '@ui/components/add-track-dialog';
 import { SettingsPanel } from '@ui/components/settings-panel';
 import { OneShotPalette } from '@ui/components/oneshot-palette';
+import { AttributionPanel } from '@ui/components/attribution-panel';
 import { createTrack } from '@domain/models/track';
 
 export function App() {
@@ -39,6 +40,7 @@ export function App() {
   const pauseTrack = usePlaybackStore((s) => s.pause);
   const stopTrack = usePlaybackStore((s) => s.stop);
   const setTrackVolume = usePlaybackStore((s) => s.setVolume);
+  const seekTrack = usePlaybackStore((s) => s.seekTo);
   const fadeInTrack = usePlaybackStore((s) => s.fadeIn);
   const fadeOutTrack = usePlaybackStore((s) => s.fadeOut);
   const panic = usePlaybackStore((s) => s.panic);
@@ -48,6 +50,8 @@ export function App() {
   const oneShotTracks = useSessionStore((s) => s.oneShotTracks);
   const addOneShotTrack = useSessionStore((s) => s.addOneShotTrack);
   const removeOneShotTrack = useSessionStore((s) => s.removeOneShotTrack);
+  const moveScene = useSessionStore((s) => s.moveScene);
+  const moveTrack = useSessionStore((s) => s.moveTrack);
 
   const uiScale = useSettingsStore((s) => s.uiScale);
   const showSettings = useSettingsStore((s) => s.showSettings);
@@ -61,6 +65,8 @@ export function App() {
   const [showAddScene, setShowAddScene] = useState(false);
   const [showAddTrack, setShowAddTrack] = useState(false);
   const [showAddOneShot, setShowAddOneShot] = useState(false);
+  const [showAttribution, setShowAttribution] = useState(false);
+  const [dragTrackId, setDragTrackId] = useState<string | null>(null);
 
   // Initialize playback engine
   useEffect(() => {
@@ -186,6 +192,25 @@ export function App() {
       removeTrack(sceneId, trackId);
     },
     [stopTrack, removeTrack],
+  );
+
+  const handleDropOnTrack = useCallback(
+    (targetTrackId: string) => {
+      if (!dragTrackId || !activeScene || dragTrackId === targetTrackId) return;
+      const trackIds = activeScene.tracks.map((t) => t.id);
+      const fromIndex = trackIds.indexOf(dragTrackId);
+      const toIndex = trackIds.indexOf(targetTrackId);
+      if (fromIndex === -1 || toIndex === -1) return;
+
+      // Move from → to by shifting with moveTrack
+      const distance = toIndex - fromIndex;
+      const direction = distance > 0 ? 'down' : 'up';
+      for (let i = 0; i < Math.abs(distance); i++) {
+        moveTrack(activeScene.id, dragTrackId, direction);
+      }
+      setDragTrackId(null);
+    },
+    [dragTrackId, activeScene, moveTrack],
   );
 
   const handlePlayScene = useCallback(() => {
@@ -423,6 +448,7 @@ export function App() {
               onAddScene={() => setShowAddScene(true)}
               onDuplicateScene={duplicateScene}
               onDeleteScene={removeScene}
+              onMoveScene={moveScene}
             />
           </div>
           <OneShotPalette
@@ -449,7 +475,7 @@ export function App() {
               />
 
               <div className="flex-1 overflow-y-auto">
-                {activeScene.tracks.map((track) => (
+                {activeScene.tracks.map((track, index) => (
                   <TrackChannel
                     key={track.id}
                     track={track}
@@ -461,6 +487,15 @@ export function App() {
                     onMuteToggle={() => handleMuteToggle(activeScene.id, track.id, track.muted)}
                     onLoopToggle={() => updateTrack(activeScene.id, track.id, { loopEnabled: !track.loopEnabled })}
                     onRemove={() => handleRemoveTrack(activeScene.id, track.id)}
+                    onSeek={(posMs) => seekTrack(track.id, posMs)}
+                    onMoveUp={() => moveTrack(activeScene.id, track.id, 'up')}
+                    onMoveDown={() => moveTrack(activeScene.id, track.id, 'down')}
+                    onDragStart={() => setDragTrackId(track.id)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => handleDropOnTrack(track.id)}
+                    isFirst={index === 0}
+                    isLast={index === activeScene.tracks.length - 1}
+                    isDragging={dragTrackId === track.id}
                   />
                 ))}
 
@@ -493,6 +528,14 @@ export function App() {
           )}
         </main>
       </div>
+
+      {/* Attribution panel */}
+      <AttributionPanel
+        open={showAttribution}
+        onToggle={() => setShowAttribution(!showAttribution)}
+        activeTrackIds={Object.keys(tracks)}
+        playbackInfo={tracks}
+      />
 
       <AddSceneDialog
         open={showAddScene}

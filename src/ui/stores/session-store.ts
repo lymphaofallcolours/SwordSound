@@ -43,6 +43,9 @@ export type SessionState = {
   removeTrack: (sceneId: string, trackId: string) => void;
   updateTrack: (sceneId: string, trackId: string, changes: Record<string, unknown>) => void;
 
+  moveScene: (sceneId: string, direction: 'up' | 'down') => void;
+  moveTrack: (sceneId: string, trackId: string, direction: 'up' | 'down') => void;
+
   addOneShotTrack: (track: Track) => void;
   removeOneShotTrack: (trackId: string) => void;
 };
@@ -163,6 +166,36 @@ export function createSessionStore(persistence: PersistencePort) {
       if (!currentSession) return;
       const updated = updateTrackUseCase(currentSession, sceneId, trackId, changes);
       set({ currentSession: updated });
+    },
+
+    moveScene: (sceneId, direction) => {
+      const { currentSession } = get();
+      if (!currentSession) return;
+      const scenes = [...currentSession.scenes];
+      const index = scenes.findIndex((s) => s.id === sceneId);
+      if (index === -1) return;
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= scenes.length) return;
+      [scenes[index], scenes[newIndex]] = [scenes[newIndex], scenes[index]];
+      set({ currentSession: { ...currentSession, scenes, updatedAt: new Date().toISOString() } });
+    },
+
+    moveTrack: (sceneId, trackId, direction) => {
+      const { currentSession } = get();
+      if (!currentSession) return;
+      const sceneIndex = currentSession.scenes.findIndex((s) => s.id === sceneId);
+      if (sceneIndex === -1) return;
+      const scene = currentSession.scenes[sceneIndex];
+      const tracks = [...scene.tracks];
+      const index = tracks.findIndex((t) => t.id === trackId);
+      if (index === -1) return;
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= tracks.length) return;
+      [tracks[index], tracks[newIndex]] = [tracks[newIndex], tracks[index]];
+      const updatedScene = { ...scene, tracks };
+      const scenes = [...currentSession.scenes];
+      scenes[sceneIndex] = updatedScene;
+      set({ currentSession: { ...currentSession, scenes, updatedAt: new Date().toISOString() } });
     },
 
     addOneShotTrack: (track: Track) => {

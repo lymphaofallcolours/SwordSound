@@ -11,6 +11,15 @@ type TrackChannelProps = {
   onMuteToggle: () => void;
   onLoopToggle: () => void;
   onRemove: () => void;
+  onSeek?: (positionMs: number) => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  onDragStart?: () => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: () => void;
+  isFirst?: boolean;
+  isLast?: boolean;
+  isDragging?: boolean;
 };
 
 export function TrackChannel({
@@ -23,6 +32,15 @@ export function TrackChannel({
   onMuteToggle,
   onLoopToggle,
   onRemove,
+  onSeek,
+  onMoveUp,
+  onMoveDown,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  isFirst,
+  isLast,
+  isDragging,
 }: TrackChannelProps) {
   const state = playbackInfo?.state ?? 'stopped';
   const isPlaying = state === 'playing';
@@ -45,7 +63,11 @@ export function TrackChannel({
 
   return (
     <div
-      className="group flex items-center gap-3 hover:bg-[var(--color-base-850)] transition-colors border-b border-[var(--color-base-800)]/50"
+      draggable={!!onDragStart}
+      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; onDragStart?.(); }}
+      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; onDragOver?.(e); }}
+      onDrop={(e) => { e.preventDefault(); onDrop?.(); }}
+      className={`group flex items-center gap-3 hover:bg-[var(--color-base-850)] transition-colors border-b border-[var(--color-base-800)]/50 ${isDragging ? 'opacity-40' : ''}`}
       style={{ padding: 'var(--spacing-track)', minHeight: 'var(--track-height)' }}
     >
       {/* Status indicator */}
@@ -88,8 +110,17 @@ export function TrackChannel({
         </span>
       </div>
 
-      {/* Timeline bar */}
-      <div className="w-32 h-2 timeline-track flex-shrink-0 hidden lg:block">
+      {/* Timeline bar — click to seek */}
+      <div
+        className="w-32 h-3 timeline-track flex-shrink-0 hidden lg:block cursor-pointer relative group/timeline"
+        onClick={(e) => {
+          if (!onSeek || !track.duration) return;
+          const rect = e.currentTarget.getBoundingClientRect();
+          const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+          onSeek(Math.round(fraction * track.duration));
+        }}
+        title="Click to seek"
+      >
         <div className="timeline-progress h-full transition-[width] duration-300" style={{ width: `${progress}%` }} />
       </div>
 
@@ -125,7 +156,25 @@ export function TrackChannel({
         activeColor="purple"
       />
 
-      {/* Remove */}
+      {/* Reorder + Remove */}
+      <div className="flex flex-col opacity-0 group-hover:opacity-100 transition-all">
+        <button
+          onClick={onMoveUp}
+          disabled={isFirst}
+          className="text-[var(--color-base-600)] hover:text-[var(--color-base-200)] disabled:opacity-20 text-[8px] leading-none"
+          title="Move up"
+        >
+          ▲
+        </button>
+        <button
+          onClick={onMoveDown}
+          disabled={isLast}
+          className="text-[var(--color-base-600)] hover:text-[var(--color-base-200)] disabled:opacity-20 text-[8px] leading-none"
+          title="Move down"
+        >
+          ▼
+        </button>
+      </div>
       <button
         onClick={onRemove}
         className="text-[var(--color-base-600)] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center"

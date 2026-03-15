@@ -9,9 +9,10 @@ type SceneListProps = {
   onAddScene: () => void;
   onDuplicateScene?: (id: string) => void;
   onDeleteScene?: (id: string) => void;
+  onMoveScene?: (sceneId: string, direction: 'up' | 'down') => void;
 };
 
-export function SceneList({ scenes, activeSceneId, onSelectScene, onAddScene, onDuplicateScene, onDeleteScene }: SceneListProps) {
+export function SceneList({ scenes, activeSceneId, onSelectScene, onAddScene, onDuplicateScene, onDeleteScene, onMoveScene }: SceneListProps) {
   const [contextMenuId, setContextMenuId] = useState<string | null>(null);
 
   return (
@@ -76,6 +77,21 @@ export function SceneList({ scenes, activeSceneId, onSelectScene, onAddScene, on
                 <div className="absolute left-3 top-full z-20 bg-[var(--color-base-800)] border border-[var(--color-base-600)] rounded-sm shadow-lg py-1 min-w-[120px]"
                   onMouseLeave={() => setContextMenuId(null)}
                 >
+                  <button
+                    onClick={() => { onMoveScene?.(scene.id, 'up'); setContextMenuId(null); }}
+                    className="w-full text-left px-3 py-1.5 text-xs text-[var(--color-base-200)] hover:bg-[var(--color-base-700)] transition-colors disabled:opacity-30"
+                    disabled={scenes.indexOf(scene) === 0}
+                  >
+                    Move Up
+                  </button>
+                  <button
+                    onClick={() => { onMoveScene?.(scene.id, 'down'); setContextMenuId(null); }}
+                    className="w-full text-left px-3 py-1.5 text-xs text-[var(--color-base-200)] hover:bg-[var(--color-base-700)] transition-colors disabled:opacity-30"
+                    disabled={scenes.indexOf(scene) === scenes.length - 1}
+                  >
+                    Move Down
+                  </button>
+                  <div className="my-1 border-t border-[var(--color-base-700)]" />
                   <button
                     onClick={() => { onDuplicateScene?.(scene.id); setContextMenuId(null); }}
                     className="w-full text-left px-3 py-1.5 text-xs text-[var(--color-base-200)] hover:bg-[var(--color-base-700)] transition-colors"

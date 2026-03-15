@@ -19,6 +19,7 @@ export type PlaybackState = {
   tracks: Record<string, TrackPlaybackInfo>;
   player: SoundCloudPlayer | null;
   onTrackFinish: ((trackId: string) => void) | null;
+  seekCooldowns: Set<string>;
 
   initPlayer: () => void;
   setOnTrackFinish: (callback: (trackId: string) => void) => void;
@@ -40,6 +41,7 @@ export function createPlaybackStore() {
     tracks: {},
     player: null,
     onTrackFinish: null,
+    seekCooldowns: new Set(),
 
     setOnTrackFinish: (callback) => set({ onTrackFinish: callback }),
 
@@ -59,6 +61,8 @@ export function createPlaybackStore() {
           }));
         },
         onProgress: (trackId, positionMs, relativePosition) => {
+          // Skip progress updates during seek cooldown
+          if (get().seekCooldowns.has(trackId)) return;
           set((prev) => ({
             tracks: {
               ...prev.tracks,
@@ -141,7 +145,29 @@ export function createPlaybackStore() {
     pause: (trackId) => get().player?.pause(trackId),
     stop: (trackId) => get().player?.stop(trackId),
     setVolume: (trackId, volume) => get().player?.setVolume(trackId, volume),
-    seekTo: (trackId, positionMs) => get().player?.seekTo(trackId, positionMs),
+    seekTo: (trackId, positionMs) => {
+      const { player, seekCooldowns } = get();
+      if (!player) return;
+      player.seekTo(trackId, positionMs);
+      // Immediately update position and block progress callbacks briefly
+      const trackInfo = get().tracks[trackId];
+      if (trackInfo?.metadata?.duration) {
+        seekCooldowns.add(trackId);
+        set((prev) => ({
+          tracks: {
+            ...prev.tracks,
+            [trackId]: {
+              ...prev.tracks[trackId],
+              positionMs,
+              relativePosition: positionMs / trackInfo.metadata!.duration,
+            },
+          },
+        }));
+        setTimeout(() => {
+          get().seekCooldowns.delete(trackId);
+        }, 800);
+      }
+    },
     unloadTrack: (trackId) => {
       get().player?.unloadTrack(trackId);
       set((prev) => {
