@@ -5,40 +5,37 @@
 ## Current Session
 
 **Date:** 2026-03-15
-**Goal:** Build SwordSound from scratch — fully functional live-play soundboard
+**Goal:** Build SwordSound from scratch — complete initial release
 
 ### Completed This Session
-- Full project bootstrap through live-play-ready app
-- 22 commits pushed to GitHub, 109 tests passing
-- Multi-track simultaneous SoundCloud playback
-- Session management (create, load, persist, export, import)
-- Scene management (create, duplicate, delete, crossfade, reorder)
-- Track controls (play/pause/stop, volume, mute, loop, seek)
-- Track reordering via drag-and-drop + up/down arrows
-- Scene fades (configurable) and scene crossfade
-- GM notes editing inline
-- One-shot sounds palette (persistent)
-- Settings panel (UI scale, fade/crossfade durations)
-- Keyboard shortcuts (Space, Escape)
-- SoundCloud attribution panel (ToS compliance)
-- Session export/import via native file dialogs
-- Professional dark UI with scene accent colors
-- Volume ducking engine (infrastructure ready)
-- Click-to-seek on timeline bar
+- Full project from zero to working desktop app in one session
+- 27 commits pushed to GitHub, 109 tests across 17 files
+- **Core:** Multi-track SoundCloud playback, session persistence, export/import
+- **Scenes:** Create, duplicate, delete, crossfade, reorder, GM notes
+- **Tracks:** Play/pause/stop, volume, mute, loop, seek, drag reorder
+- **Cue Loops:** Define loop regions, break-to-advance, visual timeline markers
+- **Custom Start/End:** Trim points via track editor
+- **One-Shots:** Persistent palette with auto volume ducking
+- **Fades:** Scene fade in/out, scene crossfade (configurable durations)
+- **Settings:** UI scale (Compact/Default/Large), fade/crossfade durations
+- **Keyboard:** Space (toggle play), Escape (panic), Ctrl+Z (undo framework)
+- **Attribution:** SoundCloud ToS-compliant attribution panel
+- **UI:** Professional dark palette, scene accent colors, aeroglass panels
 
 ### In Progress
 - (none)
 
-### Next Steps
-1. Cue loops — the signature feature
-2. Custom start/end points on tracks
-3. Volume ducking wired to one-shots
-4. Undo/redo
-5. Session log
-6. Track groups with group volume/mute
+### Next Steps (future sessions)
+1. Full undo/redo integration with session store
+2. Track groups with group volume/mute (Music/Ambience/Effects)
+3. Session log export
+4. Drag-and-drop scene reordering
+5. CI pipeline for automated builds
+6. App packaging and distribution (.deb, .exe, .dmg)
+7. Discord integration (future feature from spec)
 
 ---
 
 ## Previous Sessions
-### 2026-03-15 — Project Bootstrap
-- Initial setup, all doc templates, GitHub repo created
+### 2026-03-15 — Full Build Session
+- Everything above — from `pnpm init` to working desktop app with live SoundCloud audio
