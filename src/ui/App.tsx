@@ -15,6 +15,7 @@ import { AttributionPanel } from '@ui/components/attribution-panel';
 import { CueLoopEditor } from '@ui/components/cue-loop-editor';
 import { createTrack } from '@domain/models/track';
 import type { CueLoop } from '@domain/models/cue-loop';
+import { duckAllExcept, unduckAll } from '@infrastructure/soundcloud/duck-engine';
 
 export function App() {
   const currentSession = useSessionStore((s) => s.currentSession);
@@ -242,6 +243,27 @@ export function App() {
       if (!tracks[trackId] || tracks[trackId].state === 'error') {
         await loadTrackToPlayer(trackId, soundcloudUrl);
       }
+
+      // Duck all other playing tracks
+      const player = usePlaybackStore.getState?.()?.player;
+      if (player) {
+        const allPlayingIds = Object.keys(tracks).filter(
+          (id) => tracks[id]?.state === 'playing' && id !== trackId,
+        );
+        if (allPlayingIds.length > 0) {
+          duckAllExcept(player, [trackId], allPlayingIds, 30, 300);
+
+          // Set up auto-unduck when one-shot finishes
+          const checkUnduck = setInterval(() => {
+            const state = usePlaybackStore.getState?.()?.tracks[trackId]?.state;
+            if (state !== 'playing') {
+              unduckAll(player, allPlayingIds, 500);
+              clearInterval(checkUnduck);
+            }
+          }, 500);
+        }
+      }
+
       playTrack(trackId);
     },
     [tracks, loadTrackToPlayer, playTrack],
@@ -570,8 +592,12 @@ export function App() {
             open={true}
             onClose={() => setEditingCueLoopsTrackId(null)}
             track={track}
-            onSave={(cueLoops: CueLoop[]) => {
-              updateTrack(activeScene.id, track.id, { cueLoops });
+            onSave={(cueLoops: CueLoop[], customStart?: number, customEnd?: number | null) => {
+              updateTrack(activeScene.id, track.id, {
+                cueLoops,
+                ...(customStart !== undefined && { customStart }),
+                ...(customEnd !== undefined && { customEnd }),
+              });
               setCueLoops(track.id, cueLoops);
             }}
           />

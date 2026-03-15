@@ -10,7 +10,7 @@ type CueLoopEditorProps = {
   open: boolean;
   onClose: () => void;
   track: Track;
-  onSave: (cueLoops: CueLoop[]) => void;
+  onSave: (cueLoops: CueLoop[], customStart?: number, customEnd?: number | null) => void;
 };
 
 function formatTime(ms: number): string {
@@ -30,6 +30,12 @@ function parseTime(str: string): number | null {
 }
 
 export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorProps) {
+  const [customStartStr, setCustomStartStr] = useState(
+    track.customStart > 0 ? formatTime(track.customStart) : '',
+  );
+  const [customEndStr, setCustomEndStr] = useState(
+    track.customEnd ? formatTime(track.customEnd) : '',
+  );
   const [loops, setLoops] = useState<{ startStr: string; endStr: string }[]>(
     track.cueLoops.map((cl) => ({
       startStr: formatTime(cl.startPosition),
@@ -82,19 +88,54 @@ export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorPro
       }
     }
 
-    onSave(filtered);
+    const customStart = parseTime(customStartStr) ?? 0;
+    const customEnd = customEndStr ? (parseTime(customEndStr) ?? null) : null;
+    onSave(filtered, customStart, customEnd);
     onClose();
   };
 
   const durationStr = formatTime(track.duration);
 
   return (
-    <Modal open={open} onClose={onClose} title={`Cue Loops — ${track.title}`}>
+    <Modal open={open} onClose={onClose} title={`Track Editor — ${track.title}`}>
       <div className="space-y-4">
         <p className="text-xs text-[var(--color-base-400)]">
-          Define loop regions. Playback holds at each region until you break it.
           Track duration: {durationStr}
         </p>
+
+        {/* Custom start/end points */}
+        <div>
+          <label className="block text-xs text-[var(--color-base-400)] uppercase tracking-wider mb-2">
+            Custom Start / End Points
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={customStartStr}
+              onChange={(e) => setCustomStartStr(e.target.value)}
+              placeholder="0:00"
+              className="w-16 px-2 py-1 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-xs text-center text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
+            />
+            <span className="text-xs text-[var(--color-base-500)]">→</span>
+            <input
+              type="text"
+              value={customEndStr}
+              onChange={(e) => setCustomEndStr(e.target.value)}
+              placeholder={durationStr}
+              className="w-16 px-2 py-1 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-xs text-center text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
+            />
+            <span className="text-[10px] text-[var(--color-base-600)]">(leave empty for full track)</span>
+          </div>
+        </div>
+
+        <div className="border-t border-[var(--color-base-700)] pt-3">
+          <label className="block text-xs text-[var(--color-base-400)] uppercase tracking-wider mb-2">
+            Cue Loops
+          </label>
+          <p className="text-[10px] text-[var(--color-base-500)] mb-2">
+            Playback holds at each region until you break it.
+          </p>
+        </div>
 
         <div className="space-y-2">
           {loops.map((loop, index) => (
