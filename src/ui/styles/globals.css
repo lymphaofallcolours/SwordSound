@@ -1,1 +1,105 @@
 @import 'tailwindcss';
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+}
+
+@theme {
+  --color-base-950: #040712;
+  --color-base-900: #0a0f1f;
+  --color-base-850: #0f1629;
+  --color-base-800: #141c33;
+  --color-base-700: #1e2a47;
+  --color-base-600: #2a3a5c;
+  --color-base-500: #475984;
+  --color-base-400: #6b82ad;
+  --color-base-300: #94a8cc;
+  --color-base-200: #c1cedf;
+  --color-base-100: #e4e9f0;
+
+  --color-accent: var(--scene-color, #6366f1);
+  --color-accent-glow: color-mix(in srgb, var(--scene-color, #6366f1) 40%, transparent);
+  --color-accent-dim: color-mix(in srgb, var(--scene-color, #6366f1) 15%, transparent);
+
+  --color-panic: #ef4444;
+  --color-panic-glow: rgba(239, 68, 68, 0.4);
+
+  --color-playing: #22c55e;
+  --color-paused: #eab308;
+  --color-stopped: #6b82ad;
+  --color-looping: #a855f7;
+
+  --font-display: 'JetBrains Mono', ui-monospace, monospace;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+}
+
+:root {
+  --scene-color: #6366f1;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-base-600) var(--color-base-900);
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-base-950);
+  color: var(--color-base-100);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+}
+
+/* Drag region for Electron frameless window */
+.drag-region {
+  -webkit-app-region: drag;
+}
+
+.no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Glow effect utility */
+.glow-accent {
+  box-shadow: 0 0 12px var(--color-accent-glow), 0 0 4px var(--color-accent-glow);
+}
+
+.glow-panic {
+  box-shadow: 0 0 16px var(--color-panic-glow), 0 0 6px var(--color-panic-glow);
+}
+
+/* Status dot pulse */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Track timeline bar */
+.timeline-track {
+  background: linear-gradient(
+    to right,
+    var(--color-base-700) 0%,
+    var(--color-base-600) 100%
+  );
+  border-radius: 2px;
+}
+
+.timeline-progress {
+  background: linear-gradient(
+    to right,
+    var(--color-accent) 0%,
+    color-mix(in srgb, var(--color-accent) 60%, var(--color-base-600)) 100%
+  );
+  border-radius: 2px;
+}
