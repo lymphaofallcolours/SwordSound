@@ -10,6 +10,7 @@ import { CreateSessionDialog } from '@ui/components/create-session-dialog';
 import { AddSceneDialog } from '@ui/components/add-scene-dialog';
 import { AddTrackDialog } from '@ui/components/add-track-dialog';
 import { SettingsPanel } from '@ui/components/settings-panel';
+import { OneShotPalette } from '@ui/components/oneshot-palette';
 import { createTrack } from '@domain/models/track';
 
 export function App() {
@@ -44,6 +45,9 @@ export function App() {
   const tracks = usePlaybackStore((s) => s.tracks);
   const saveCurrentSession = useSessionStore((s) => s.saveCurrentSession);
   const updateScene = useSessionStore((s) => s.updateScene);
+  const oneShotTracks = useSessionStore((s) => s.oneShotTracks);
+  const addOneShotTrack = useSessionStore((s) => s.addOneShotTrack);
+  const removeOneShotTrack = useSessionStore((s) => s.removeOneShotTrack);
 
   const uiScale = useSettingsStore((s) => s.uiScale);
   const showSettings = useSettingsStore((s) => s.showSettings);
@@ -56,6 +60,7 @@ export function App() {
 
   const [showAddScene, setShowAddScene] = useState(false);
   const [showAddTrack, setShowAddTrack] = useState(false);
+  const [showAddOneShot, setShowAddOneShot] = useState(false);
 
   // Initialize playback engine
   useEffect(() => {
@@ -198,6 +203,45 @@ export function App() {
       stopTrack(track.id);
     }
   }, [activeScene, stopTrack]);
+
+  const handleTriggerOneShot = useCallback(
+    async (trackId: string, soundcloudUrl: string) => {
+      if (!tracks[trackId] || tracks[trackId].state === 'error') {
+        await loadTrackToPlayer(trackId, soundcloudUrl);
+      }
+      playTrack(trackId);
+    },
+    [tracks, loadTrackToPlayer, playTrack],
+  );
+
+  const handleAddOneShot = useCallback(
+    async (url: string) => {
+      const track = createTrack({
+        soundcloudUrl: url,
+        title: 'Loading...',
+        artist: 'Loading...',
+        duration: 1,
+        isOneShot: true,
+      });
+      addOneShotTrack(track);
+
+      const metadata = await loadTrackToPlayer(track.id, url);
+      if (metadata) {
+        // Update the one-shot track with real metadata
+        const updated = createTrack({
+          soundcloudUrl: url,
+          title: metadata.title,
+          artist: metadata.artist,
+          duration: metadata.duration,
+          artworkUrl: metadata.artworkUrl,
+          isOneShot: true,
+        });
+        removeOneShotTrack(track.id);
+        addOneShotTrack({ ...updated, id: track.id } as typeof updated);
+      }
+    },
+    [addOneShotTrack, removeOneShotTrack, loadTrackToPlayer],
+  );
 
   const handleFadeInScene = useCallback(() => {
     if (!activeScene) return;
@@ -366,14 +410,23 @@ export function App() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
-        <aside className="w-52 flex-shrink-0 bg-[var(--color-base-900)] border-r border-[var(--color-base-700)] overflow-hidden">
-          <SceneList
-            scenes={currentSession.scenes}
-            activeSceneId={activeSceneId}
-            onSelectScene={handleCrossfadeToScene}
-            onAddScene={() => setShowAddScene(true)}
-            onDuplicateScene={duplicateScene}
-            onDeleteScene={removeScene}
+        <aside className="w-52 flex-shrink-0 bg-[var(--color-base-900)] border-r border-[var(--color-base-700)] flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
+            <SceneList
+              scenes={currentSession.scenes}
+              activeSceneId={activeSceneId}
+              onSelectScene={handleCrossfadeToScene}
+              onAddScene={() => setShowAddScene(true)}
+              onDuplicateScene={duplicateScene}
+              onDeleteScene={removeScene}
+            />
+          </div>
+          <OneShotPalette
+            tracks={oneShotTracks}
+            playbackInfo={tracks}
+            onTrigger={handleTriggerOneShot}
+            onAdd={() => setShowAddOneShot(true)}
+            onRemove={removeOneShotTrack}
           />
         </aside>
 
@@ -446,6 +499,11 @@ export function App() {
         open={showAddTrack}
         onClose={() => setShowAddTrack(false)}
         onConfirm={handleAddTrack}
+      />
+      <AddTrackDialog
+        open={showAddOneShot}
+        onClose={() => setShowAddOneShot(false)}
+        onConfirm={handleAddOneShot}
       />
       <SettingsPanel
         open={showSettings}

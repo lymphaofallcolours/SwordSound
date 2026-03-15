@@ -25,6 +25,7 @@ export type SessionState = {
   sessionList: SessionSummary[];
   isLoading: boolean;
   activeSceneId: string | null;
+  oneShotTracks: Track[];
 
   createSession: (name: string) => Promise<void>;
   loadSession: (id: string) => Promise<void>;
@@ -41,6 +42,9 @@ export type SessionState = {
   addTrack: (sceneId: string, track: Track) => void;
   removeTrack: (sceneId: string, trackId: string) => void;
   updateTrack: (sceneId: string, trackId: string, changes: Record<string, unknown>) => void;
+
+  addOneShotTrack: (track: Track) => void;
+  removeOneShotTrack: (trackId: string) => void;
 };
 
 export function createSessionStore(persistence: PersistencePort) {
@@ -49,6 +53,7 @@ export function createSessionStore(persistence: PersistencePort) {
     sessionList: [],
     isLoading: false,
     activeSceneId: null,
+    oneShotTracks: [],
 
     createSession: async (name: string) => {
       set({ isLoading: true });
@@ -142,6 +147,14 @@ export function createSessionStore(persistence: PersistencePort) {
       if (!currentSession) return;
       const updated = updateTrackUseCase(currentSession, sceneId, trackId, changes);
       set({ currentSession: updated });
+    },
+
+    addOneShotTrack: (track: Track) => {
+      set((prev) => ({ oneShotTracks: [...prev.oneShotTracks, track] }));
+    },
+
+    removeOneShotTrack: (trackId: string) => {
+      set((prev) => ({ oneShotTracks: prev.oneShotTracks.filter((t) => t.id !== trackId) }));
     },
   }));
 }
