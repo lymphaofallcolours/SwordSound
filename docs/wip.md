@@ -5,46 +5,33 @@
 ## Current Session
 
 **Date:** 2026-03-15
-**Goal:** Feature batch — polish, bug fixes, and new features per user feedback
+**Goal:** Complete feature batch — polish, cross-scene operations, crossfade
 
-### Completed This Session
-- Time display (MM:SS) on every track with continuous hover-to-preview
-- Cue loop timeline colors: gray (broken), green (active), cyan (upcoming)
-- Cue loop seek cooldown: progress bar snaps instantly on loop boundary seek
-- Cue loop editor validation: overlap warnings, out-of-range warnings
-- Safe cue loop editing during playback (seek cooldown on save)
-- Custom start/end point enforcement (seek to start on play, stop/loop at end)
-- Custom start/end visual indicators on timeline (gray overlay)
-- Seek clamped to custom range when clicking timeline
-- Scene rename via right-click context menu with inline editing
-- Scene drag-and-drop reordering in sidebar
-- Track right-click context menu: Copy, Duplicate, Track Editor, Auto-Play, Remove
-- Track alias/GM label in Track Editor (amber text above title)
-- Auto-play badge (green "auto" tag) for scene-switch auto-start
-- Manual duck toggle: mic button + D key for GM narration
-- One-shot metadata persistence fix
-- Context menu position fix (appears at cursor, closes on click outside)
-- Drag dimming reset fix
-- Input cursor alignment fix in editor time fields
-- SoundCloud API ToS compliance rule added to memory
-- 109 tests, 29 commits
-
-### In Progress
-- (none)
+### Completed This Session (cumulative)
+- 31 commits, 109 tests, fully functional desktop soundboard
+- All core spec features implemented except track groups and session log export
+- Cross-scene track drag-and-drop (drag track onto sidebar scene)
+- Track clipboard copy/paste between scenes
+- Track loop crossfade (soft fade-in on restart)
+- Floating hover time label on progress bar
+- Scene drag reorder + rename inline
+- Track right-click context menu (copy, duplicate, editor, auto-play, remove)
+- GM alias per track, auto-play toggle, manual duck (D key + mic button)
+- Custom start/end enforcement, visual indicators, seek clamping
+- Cue loop timeline colors (broken/active/upcoming), seek cooldown fix
+- Cue loop editor validation (overlap + out-of-range warnings)
+- Time display on every track (current/total)
 
 ### Next Steps (future sessions)
-1. Cue loop crossfade (fade-out → seek → fade-in at boundaries)
-2. Track loop crossfade (smooth restart)
-3. Track groups with group volume/mute
-4. Volume presets per scene (save/restore mix)
-5. Track fade-in delay (stagger starts)
-6. Full undo/redo integration
-7. Session log export UI
-8. App packaging and distribution
+1. Track groups with group volume/mute (Music/Ambience/Effects)
+2. Volume presets per scene
+3. Track fade-in delay (stagger starts)
+4. Session log export UI
+5. Full undo/redo integration
+6. CI pipeline + app packaging
 
 ---
 
 ## Previous Sessions
 ### 2026-03-15 — Full Build + Polish
-- From zero to fully functional desktop app with live SoundCloud audio
-- 29 commits, 109 tests, ~5000+ lines of code
+- From zero to feature-complete desktop app in one session
