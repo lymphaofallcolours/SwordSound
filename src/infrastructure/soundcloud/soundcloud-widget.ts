@@ -37,7 +37,7 @@ function getSCWidget(): typeof window.SC {
 
 function buildIframeSrc(soundcloudUrl: string): string {
   const encodedUrl = encodeURIComponent(soundcloudUrl);
-  return `https://w.soundcloud.com/player/?url=${encodedUrl}&auto_play=false&show_artwork=false&visual=false`;
+  return `https://w.soundcloud.com/player/?url=${encodedUrl}&auto_play=false&show_artwork=false&visual=false&single_active=false`;
 }
 
 export function createSoundCloudPlayer(callbacks: PlaybackCallbacks = {}) {
@@ -172,7 +172,7 @@ export function createSoundCloudPlayer(callbacks: PlaybackCallbacks = {}) {
     stopAll(): void {
       for (const [, entry] of widgets) {
         entry.widget.pause();
-        entry.widget.setVolume(0);
+        entry.widget.seekTo(0);
         entry.state = 'stopped';
         callbacks.onStateChange?.(entry.trackId, 'stopped');
       }

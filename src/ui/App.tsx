@@ -30,6 +30,7 @@ export function App() {
   const closeModal = useUiStore((s) => s.closeModal);
 
   const initPlayer = usePlaybackStore((s) => s.initPlayer);
+  const setOnTrackFinish = usePlaybackStore((s) => s.setOnTrackFinish);
   const loadTrackToPlayer = usePlaybackStore((s) => s.loadTrack);
   const playTrack = usePlaybackStore((s) => s.play);
   const pauseTrack = usePlaybackStore((s) => s.pause);
@@ -37,6 +38,7 @@ export function App() {
   const setTrackVolume = usePlaybackStore((s) => s.setVolume);
   const panic = usePlaybackStore((s) => s.panic);
   const tracks = usePlaybackStore((s) => s.tracks);
+  const saveCurrentSession = useSessionStore((s) => s.saveCurrentSession);
 
   const [showAddScene, setShowAddScene] = useState(false);
   const [showAddTrack, setShowAddTrack] = useState(false);
@@ -49,6 +51,30 @@ export function App() {
   useEffect(() => {
     refreshSessionList();
   }, [refreshSessionList]);
+
+  // Loop support: when a track finishes, replay if loop is enabled
+  useEffect(() => {
+    setOnTrackFinish((trackId: string) => {
+      if (!currentSession) return;
+      for (const scene of currentSession.scenes) {
+        const track = scene.tracks.find((t) => t.id === trackId);
+        if (track?.loopEnabled) {
+          // Small delay to avoid race with widget state
+          setTimeout(() => playTrack(trackId), 100);
+          return;
+        }
+      }
+    });
+  }, [currentSession, setOnTrackFinish, playTrack]);
+
+  // Auto-save session every 30 seconds when changes occur
+  useEffect(() => {
+    if (!currentSession) return;
+    const timer = setInterval(() => {
+      saveCurrentSession();
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [currentSession, saveCurrentSession]);
 
   const activeScene = currentSession?.scenes.find((s) => s.id === activeSceneId) ?? null;
 
@@ -92,9 +118,8 @@ export function App() {
 
   const handlePlayTrack = useCallback(
     async (trackId: string, soundcloudUrl: string) => {
-      const player = usePlaybackStore.getState?.() ?? { player: null };
-      // Load if not already loaded
-      if (!tracks[trackId] || tracks[trackId].state === 'stopped' || tracks[trackId].state === 'error') {
+      // Load widget if not already loaded
+      if (!tracks[trackId] || tracks[trackId].state === 'error') {
         await loadTrackToPlayer(trackId, soundcloudUrl);
       }
       playTrack(trackId);
@@ -149,6 +174,32 @@ export function App() {
       stopTrack(track.id);
     }
   }, [activeScene, stopTrack]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      switch (e.key) {
+        case 'Escape':
+          panic();
+          break;
+        case ' ':
+          e.preventDefault();
+          if (activeScene) {
+            const anyPlaying = activeScene.tracks.some((t) => tracks[t.id]?.state === 'playing');
+            if (anyPlaying) {
+              handleStopScene();
+            } else {
+              handlePlayScene();
+            }
+          }
+          break;
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [activeScene, tracks, panic, handlePlayScene, handleStopScene]);
 
   // Welcome screen
   if (!currentSession) {

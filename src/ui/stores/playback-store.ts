@@ -17,8 +17,10 @@ export type TrackPlaybackInfo = {
 export type PlaybackState = {
   tracks: Record<string, TrackPlaybackInfo>;
   player: SoundCloudPlayer | null;
+  onTrackFinish: ((trackId: string) => void) | null;
 
   initPlayer: () => void;
+  setOnTrackFinish: (callback: (trackId: string) => void) => void;
   loadTrack: (trackId: string, soundcloudUrl: string) => Promise<TrackMetadata | null>;
   play: (trackId: string) => void;
   pause: (trackId: string) => void;
@@ -34,6 +36,9 @@ export function createPlaybackStore() {
   return createStore<PlaybackState>((set, get) => ({
     tracks: {},
     player: null,
+    onTrackFinish: null,
+
+    setOnTrackFinish: (callback) => set({ onTrackFinish: callback }),
 
     initPlayer: () => {
       if (get().player) return;
@@ -74,6 +79,8 @@ export function createPlaybackStore() {
               },
             },
           }));
+          // Notify external handler (used for loop logic)
+          get().onTrackFinish?.(trackId);
         },
         onMetadataLoaded: (trackId, metadata) => {
           set((prev) => ({
