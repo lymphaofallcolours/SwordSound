@@ -27,6 +27,7 @@ export type Track = {
   readonly isOneShot: boolean;
   readonly autoPlay: boolean;
   readonly alias: string;
+  readonly fadeInOnPlay: boolean;
 };
 
 type CreateTrackInput = {
@@ -47,6 +48,7 @@ type CreateTrackInput = {
   isOneShot?: boolean;
   autoPlay?: boolean;
   alias?: string;
+  fadeInOnPlay?: boolean;
 };
 
 export function createTrack(input: CreateTrackInput): Track {
@@ -76,5 +78,6 @@ export function createTrack(input: CreateTrackInput): Track {
     isOneShot: input.isOneShot ?? false,
     autoPlay: input.autoPlay ?? false,
     alias: input.alias ?? '',
+    fadeInOnPlay: input.fadeInOnPlay ?? false,
   };
 }

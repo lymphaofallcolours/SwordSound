@@ -97,23 +97,19 @@ export function App() {
       if (!session) return;
       for (const scene of session.scenes) {
         const track = scene.tracks.find((t) => t.id === trackId);
-        if (track?.loopEnabled || track?.crossfadeLoop) {
+        // Crossfade loops are handled by the position interval, not here
+        if (track?.crossfadeLoop) return;
+        if (track?.loopEnabled) {
           const startPos = track.customStart > 0 ? (track.customStart as number) : 0;
-          const xfadeDur = Number(track.crossfadeDuration) || 0;
           setTimeout(() => {
             if (startPos > 0) seekTrack(trackId, startPos);
-            if (track.crossfadeLoop && xfadeDur > 0) {
-              // Soft crossfade restart: fade in from silence
-              fadeInTrack(trackId, Number(track.volume), xfadeDur * 1000);
-            } else {
-              playTrack(trackId);
-            }
+            playTrack(trackId);
           }, 100);
           return;
         }
       }
     });
-  }, [currentSession, setOnTrackFinish, playTrack, seekTrack, fadeInTrack]);
+  }, [currentSession, setOnTrackFinish, playTrack, seekTrack]);
 
   // Custom end point enforcement — use ref to avoid recreating interval on every tick
   const sessionRef = useRef(currentSession);
@@ -121,29 +117,76 @@ export function App() {
   sessionRef.current = currentSession;
   tracksRef.current = tracks;
 
+  // Crossfade loop tracking: which tracks have started their pre-end fade
+  const crossfadingTracksRef = useRef(new Set<string>());
+
   useEffect(() => {
     const interval = setInterval(() => {
       const session = sessionRef.current;
       const playbackTracks = tracksRef.current;
       if (!session) return;
+
       for (const scene of session.scenes) {
         for (const track of scene.tracks) {
-          if (!track.customEnd || track.customEnd <= 0) continue;
           const info = playbackTracks[track.id];
           if (info?.state !== 'playing') continue;
-          if (info.positionMs >= (track.customEnd as number) - 500) {
-            if (track.loopEnabled) {
-              const startPos = track.customStart > 0 ? (track.customStart as number) : 0;
-              seekTrack(track.id, startPos);
-            } else {
+
+          const endPoint = track.customEnd ? (track.customEnd as number) : (info.metadata?.duration ?? 0);
+          if (endPoint <= 0) continue;
+          const startPoint = track.customStart > 0 ? (track.customStart as number) : 0;
+          const rawXfadeDur = Number(track.crossfadeDuration) || 0;
+          const trackWindow = endPoint - startPoint;
+          // Clamp crossfade to half the track window (can't fade longer than the content)
+          const xfadeDurMs = Math.min(rawXfadeDur * 1000, trackWindow * 0.4);
+
+          // Crossfade loop: start fading out before the end
+          if (track.crossfadeLoop && xfadeDurMs > 0 && !crossfadingTracksRef.current.has(track.id)) {
+            if (info.positionMs >= endPoint - xfadeDurMs - 500) {
+              crossfadingTracksRef.current.add(track.id);
+              fadeOutTrack(track.id, xfadeDurMs, false); // fade out but don't pause
+            }
+          }
+
+          // At the end point: seek back and fade in (or just loop/stop)
+          if (info.positionMs >= endPoint - 500) {
+            if (track.crossfadeLoop && xfadeDurMs > 0) {
+              crossfadingTracksRef.current.delete(track.id);
+              seekTrack(track.id, startPoint);
+              fadeInTrack(track.id, Number(track.volume), xfadeDurMs);
+            } else if (track.loopEnabled) {
+              seekTrack(track.id, startPoint);
+            } else if (track.customEnd) {
               stopTrack(track.id);
+            }
+          }
+
+          // Cue loop crossfade: check if approaching a cue loop boundary with crossfade
+          for (const cl of track.cueLoops) {
+            if (!cl.crossfadeEnabled || !cl.crossfadeDuration) continue;
+            const clXfadeMs = Math.min(Number(cl.crossfadeDuration) * 1000, (cl.endPosition - cl.startPosition) * 0.4);
+            const clKey = `cue-${track.id}-${cl.id}`;
+            if (clXfadeMs <= 0) continue;
+
+            // Pre-boundary fade out
+            if (info.positionMs >= cl.endPosition - clXfadeMs - 500 &&
+                info.positionMs < cl.endPosition - 500 &&
+                !crossfadingTracksRef.current.has(clKey)) {
+              crossfadingTracksRef.current.add(clKey);
+              fadeOutTrack(track.id, clXfadeMs, false);
+            }
+            // At boundary: fade in (the cue loop engine handles the seek)
+            if (info.positionMs >= cl.endPosition - 500 || info.positionMs < cl.startPosition + 500) {
+              if (crossfadingTracksRef.current.has(clKey)) {
+                crossfadingTracksRef.current.delete(clKey);
+                fadeInTrack(track.id, Number(track.volume), clXfadeMs);
+              }
             }
           }
         }
       }
-    }, 300);
+    }, 200);
     return () => clearInterval(interval);
-  }, [seekTrack, stopTrack]);
+  }, [seekTrack, stopTrack, fadeOutTrack, fadeInTrack]);
 
   // Auto-save session every 30 seconds when changes occur
   useEffect(() => {
@@ -229,13 +272,19 @@ export function App() {
             if (track.customStart > 0) {
               seekTrack(trackId, track.customStart);
             }
+            // Fade in on first play if enabled
+            if (track.fadeInOnPlay) {
+              const xfadeDur = Number(track.crossfadeDuration) || 2;
+              fadeInTrack(trackId, Number(track.volume), xfadeDur * 1000);
+              return; // fadeInTrack already calls play
+            }
             break;
           }
         }
       }
       playTrack(trackId);
     },
-    [tracks, loadTrackToPlayer, playTrack, setTrackVolume, setCueLoops, currentSession],
+    [tracks, loadTrackToPlayer, playTrack, fadeInTrack, setTrackVolume, setCueLoops, currentSession],
   );
 
   const handleVolumeChange = useCallback(

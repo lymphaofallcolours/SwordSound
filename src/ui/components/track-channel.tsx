@@ -319,12 +319,6 @@ export function TrackChannel({
             {onEditCueLoops && (
               <CtxMenuItem label="Track Editor..." onClick={() => { onEditCueLoops(); setContextMenuPos(null); }} />
             )}
-            {onAutoPlayToggle && (
-              <CtxMenuItem
-                label={track.autoPlay ? '✓ Auto-Play on Scene Switch' : '  Auto-Play on Scene Switch'}
-                onClick={() => { onAutoPlayToggle(); setContextMenuPos(null); }}
-              />
-            )}
             <div className="my-1 border-t border-[var(--color-base-700)]" />
             <CtxMenuItem label="Remove" onClick={() => { onRemove(); setContextMenuPos(null); }} danger />
           </div>

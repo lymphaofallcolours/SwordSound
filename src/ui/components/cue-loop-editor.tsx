@@ -34,6 +34,7 @@ export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorPro
   const [crossfadeLoop, setCrossfadeLoop] = useState(track.crossfadeLoop);
   const [crossfadeDurationSec, setCrossfadeDurationSec] = useState(track.crossfadeDuration as number);
   const [autoPlay, setAutoPlay] = useState(track.autoPlay);
+  const [fadeInOnPlay, setFadeInOnPlay] = useState(track.fadeInOnPlay ?? false);
   const [customStartStr, setCustomStartStr] = useState(
     track.customStart > 0 ? formatTime(track.customStart) : '',
   );
@@ -98,6 +99,7 @@ export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorPro
       crossfadeLoop,
       crossfadeDuration: crossfadeDurationSec,
       autoPlay,
+      fadeInOnPlay,
     });
     onClose();
   };
@@ -131,6 +133,11 @@ export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorPro
             <input type="checkbox" checked={autoPlay} onChange={(e) => setAutoPlay(e.target.checked)}
               className="accent-[var(--color-accent)]" />
             Auto-play on scene switch
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-[var(--color-base-300)] cursor-pointer">
+            <input type="checkbox" checked={fadeInOnPlay} onChange={(e) => setFadeInOnPlay(e.target.checked)}
+              className="accent-[var(--color-accent)]" />
+            Fade in on first play
           </label>
           <label className="flex items-center gap-1.5 text-xs text-[var(--color-base-300)] cursor-pointer">
             <input type="checkbox" checked={crossfadeLoop} onChange={(e) => setCrossfadeLoop(e.target.checked)}
