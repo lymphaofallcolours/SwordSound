@@ -272,10 +272,11 @@ export function App() {
             if (track.customStart > 0) {
               seekTrack(trackId, track.customStart);
             }
-            // Fade in on first play if enabled
+            // Fade in on play if enabled
             if (track.fadeInOnPlay) {
-              const xfadeDur = Number(track.crossfadeDuration) || 2;
-              fadeInTrack(trackId, Number(track.volume), xfadeDur * 1000);
+              const perTrackDur = (track as Record<string, unknown>).fadeInDuration as number ?? 0;
+              const durMs = perTrackDur > 0 ? perTrackDur * 1000 : fadeDurationMs;
+              fadeInTrack(trackId, Number(track.volume), durMs);
               return; // fadeInTrack already calls play
             }
             break;
@@ -772,6 +773,7 @@ export function App() {
             open={true}
             onClose={() => setEditingCueLoopsTrackId(null)}
             track={track}
+            globalFadeDurationMs={fadeDurationMs}
             onSave={(cueLoops: CueLoop[], customStart?: number, customEnd?: number | null, alias?: string, extra?: Record<string, unknown>) => {
               updateTrack(activeScene.id, track.id, {
                 cueLoops,

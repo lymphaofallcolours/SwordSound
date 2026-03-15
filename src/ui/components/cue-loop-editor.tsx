@@ -11,6 +11,7 @@ type CueLoopEditorProps = {
   open: boolean;
   onClose: () => void;
   track: Track;
+  globalFadeDurationMs: number;
   onSave: (cueLoops: CueLoop[], customStart?: number, customEnd?: number | null, alias?: string, extra?: Record<string, unknown>) => void;
 };
 
@@ -30,12 +31,18 @@ function parseTime(str: string): number | null {
   return (min * 60 + sec) * 1000;
 }
 
-export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorProps) {
+export function CueLoopEditor({ open, onClose, track, globalFadeDurationMs, onSave }: CueLoopEditorProps) {
   const [alias, setAlias] = useState(track.alias ?? '');
   const [crossfadeLoop, setCrossfadeLoop] = useState(track.crossfadeLoop);
   const [crossfadeDurationSec, setCrossfadeDurationSec] = useState(track.crossfadeDuration as number);
   const [autoPlay, setAutoPlay] = useState(track.autoPlay);
   const [fadeInOnPlay, setFadeInOnPlay] = useState(track.fadeInOnPlay ?? false);
+  // Per-track fade-in duration override. 0 means "use global setting"
+  const [fadeInDurationSec, setFadeInDurationSec] = useState(
+    (track as Record<string, unknown>).fadeInDuration as number ?? 0,
+  );
+  const globalFadeSec = globalFadeDurationMs / 1000;
+  const effectiveFadeInSec = fadeInDurationSec > 0 ? fadeInDurationSec : globalFadeSec;
   const [customStartStr, setCustomStartStr] = useState(
     track.customStart > 0 ? formatTime(track.customStart) : '',
   );
@@ -105,6 +112,7 @@ export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorPro
       crossfadeDuration: crossfadeDurationSec,
       autoPlay,
       fadeInOnPlay,
+      fadeInDuration: fadeInDurationSec,
     });
     onClose();
   };
@@ -142,8 +150,25 @@ export function CueLoopEditor({ open, onClose, track, onSave }: CueLoopEditorPro
           <label className="flex items-center gap-1.5 text-xs text-[var(--color-base-300)] cursor-pointer">
             <input type="checkbox" checked={fadeInOnPlay} onChange={(e) => setFadeInOnPlay(e.target.checked)}
               className="accent-[var(--color-accent)]" />
-            Fade in on first play {crossfadeDurationSec > 0 ? `(${crossfadeDurationSec}s)` : '(2s)'}
+            Fade in on play
           </label>
+          {fadeInOnPlay && (
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min={0}
+                max={10}
+                step={0.5}
+                value={fadeInDurationSec}
+                onChange={(e) => setFadeInDurationSec(Number(e.target.value))}
+                className="w-14 px-1 py-0.5 bg-[var(--color-base-800)] border border-[var(--color-base-700)] rounded-sm text-xs text-[var(--color-base-200)] focus:outline-none focus:border-[var(--color-accent)]"
+                placeholder={String(globalFadeSec)}
+              />
+              <span className="text-[10px] text-[var(--color-base-500)]">
+                {fadeInDurationSec > 0 ? 'sec' : `sec (global: ${globalFadeSec}s)`}
+              </span>
+            </div>
+          )}
           <label className="flex items-center gap-1.5 text-xs text-[var(--color-base-300)] cursor-pointer">
             <input type="checkbox" checked={crossfadeLoop} onChange={(e) => setCrossfadeLoop(e.target.checked)}
               className="accent-[var(--color-accent)]" />
