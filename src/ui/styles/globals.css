@@ -131,3 +131,34 @@ input[type="range"]::-webkit-slider-thumb {
 input[type="range"]::-webkit-slider-thumb:hover {
   background: white;
 }
+
+/* UI Scale system */
+.scale-compact {
+  --btn-size: 24px;
+  --btn-icon: 10px;
+  --track-height: 36px;
+  --text-sm: 12px;
+  --text-xs: 10px;
+  --text-xxs: 8px;
+  --spacing-track: 6px 12px;
+}
+
+.scale-default {
+  --btn-size: 32px;
+  --btn-icon: 14px;
+  --track-height: 44px;
+  --text-sm: 14px;
+  --text-xs: 12px;
+  --text-xxs: 10px;
+  --spacing-track: 8px 16px;
+}
+
+.scale-large {
+  --btn-size: 40px;
+  --btn-icon: 18px;
+  --track-height: 52px;
+  --text-sm: 16px;
+  --text-xs: 14px;
+  --text-xxs: 12px;
+  --spacing-track: 10px 20px;
+}

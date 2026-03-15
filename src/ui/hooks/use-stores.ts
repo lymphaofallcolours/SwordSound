@@ -3,6 +3,7 @@ import { useStore } from 'zustand';
 import { createSessionStore, type SessionState } from '@ui/stores/session-store';
 import { createUiStore, type UiState } from '@ui/stores/ui-store';
 import { createPlaybackStore, type PlaybackState } from '@ui/stores/playback-store';
+import { createSettingsStore, type SettingsState } from '@ui/stores/settings-store';
 import { createFakePersistence } from '../../../tests/fixtures/fake-persistence';
 import type { PersistencePort } from '@application/ports/persistence-port';
 
@@ -10,6 +11,7 @@ import type { PersistencePort } from '@application/ports/persistence-port';
 let sessionStoreInstance: ReturnType<typeof createSessionStore> | null = null;
 let uiStoreInstance: ReturnType<typeof createUiStore> | null = null;
 let playbackStoreInstance: ReturnType<typeof createPlaybackStore> | null = null;
+let settingsStoreInstance: ReturnType<typeof createSettingsStore> | null = null;
 
 function getSessionStore(persistence?: PersistencePort) {
   if (!sessionStoreInstance) {
@@ -52,4 +54,15 @@ export function useUiStore<T>(selector: (state: UiState) => T): T {
 
 export function usePlaybackStore<T>(selector: (state: PlaybackState) => T): T {
   return useStore(getPlaybackStore(), selector);
+}
+
+function getSettingsStore() {
+  if (!settingsStoreInstance) {
+    settingsStoreInstance = createSettingsStore();
+  }
+  return settingsStoreInstance;
+}
+
+export function useSettingsStore<T>(selector: (state: SettingsState) => T): T {
+  return useStore(getSettingsStore(), selector);
 }

@@ -9,9 +9,10 @@ type SceneHeaderProps = {
   onFadeIn: () => void;
   onFadeOut: () => void;
   onUpdateNotes?: (notes: string) => void;
+  fadeDurationMs?: number;
 };
 
-export function SceneHeader({ scene, onPlayScene, onStopScene, onFadeIn, onFadeOut, onUpdateNotes }: SceneHeaderProps) {
+export function SceneHeader({ scene, onPlayScene, onStopScene, onFadeIn, onFadeOut, onUpdateNotes, fadeDurationMs = 3000 }: SceneHeaderProps) {
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState(scene.notes);
 
@@ -47,8 +48,8 @@ export function SceneHeader({ scene, onPlayScene, onStopScene, onFadeIn, onFadeO
           <TransportButton onClick={onPlayScene} title="Play all tracks" icon="▶" />
           <TransportButton onClick={onStopScene} title="Stop all tracks" icon="◼" />
           <div className="w-px h-5 bg-[var(--color-base-700)] mx-1" />
-          <TransportButton onClick={onFadeIn} title="Fade in scene (3s)" icon="⏶" />
-          <TransportButton onClick={onFadeOut} title="Fade out scene (3s)" icon="⏷" />
+          <TransportButton onClick={onFadeIn} title={`Fade in scene (${(fadeDurationMs / 1000).toFixed(1)}s)`} icon="⏶" />
+          <TransportButton onClick={onFadeOut} title={`Fade out scene (${(fadeDurationMs / 1000).toFixed(1)}s)`} icon="⏷" />
         </div>
       </div>
 

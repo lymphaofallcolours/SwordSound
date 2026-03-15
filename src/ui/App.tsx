@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 
-import { useSessionStore, useUiStore, usePlaybackStore } from '@ui/hooks/use-stores';
+import { useSessionStore, useUiStore, usePlaybackStore, useSettingsStore } from '@ui/hooks/use-stores';
 import { WelcomeScreen } from '@ui/components/welcome-screen';
 import { SceneList } from '@ui/components/scene-list';
 import { SceneHeader } from '@ui/components/scene-header';
@@ -9,6 +9,7 @@ import { PanicButton } from '@ui/components/panic-button';
 import { CreateSessionDialog } from '@ui/components/create-session-dialog';
 import { AddSceneDialog } from '@ui/components/add-scene-dialog';
 import { AddTrackDialog } from '@ui/components/add-track-dialog';
+import { SettingsPanel } from '@ui/components/settings-panel';
 import { createTrack } from '@domain/models/track';
 
 export function App() {
@@ -43,6 +44,15 @@ export function App() {
   const tracks = usePlaybackStore((s) => s.tracks);
   const saveCurrentSession = useSessionStore((s) => s.saveCurrentSession);
   const updateScene = useSessionStore((s) => s.updateScene);
+
+  const uiScale = useSettingsStore((s) => s.uiScale);
+  const showSettings = useSettingsStore((s) => s.showSettings);
+  const toggleSettings = useSettingsStore((s) => s.toggleSettings);
+  const setUiScale = useSettingsStore((s) => s.setUiScale);
+  const fadeDurationMs = useSettingsStore((s) => s.fadeDurationMs);
+  const crossfadeDurationMs = useSettingsStore((s) => s.crossfadeDurationMs);
+  const setFadeDuration = useSettingsStore((s) => s.setFadeDuration);
+  const setCrossfadeDuration = useSettingsStore((s) => s.setCrossfadeDuration);
 
   const [showAddScene, setShowAddScene] = useState(false);
   const [showAddTrack, setShowAddTrack] = useState(false);
@@ -196,21 +206,21 @@ export function App() {
         // Load if needed, then fade in
         if (!tracks[track.id] || tracks[track.id].state === 'error') {
           loadTrackToPlayer(track.id, track.soundcloudUrl).then(() => {
-            fadeInTrack(track.id, track.volume, 3000);
+            fadeInTrack(track.id, track.volume, fadeDurationMs);
           });
         } else {
-          fadeInTrack(track.id, track.volume, 3000);
+          fadeInTrack(track.id, track.volume, fadeDurationMs);
         }
       }
     }
-  }, [activeScene, tracks, loadTrackToPlayer, fadeInTrack]);
+  }, [activeScene, tracks, loadTrackToPlayer, fadeInTrack, fadeDurationMs]);
 
   const handleFadeOutScene = useCallback(() => {
     if (!activeScene) return;
     for (const track of activeScene.tracks) {
-      fadeOutTrack(track.id, 3000, true);
+      fadeOutTrack(track.id, fadeDurationMs, true);
     }
-  }, [activeScene, fadeOutTrack]);
+  }, [activeScene, fadeOutTrack, fadeDurationMs]);
 
   const handleCrossfadeToScene = useCallback(
     (targetSceneId: string) => {
@@ -220,7 +230,7 @@ export function App() {
       if (activeScene) {
         for (const track of activeScene.tracks) {
           if (tracks[track.id]?.state === 'playing') {
-            fadeOutTrack(track.id, 2000, true);
+            fadeOutTrack(track.id, crossfadeDurationMs, true);
           }
         }
       }
@@ -234,17 +244,17 @@ export function App() {
             if (!track.muted && track.autoPlay) {
               if (!tracks[track.id] || tracks[track.id].state === 'error') {
                 loadTrackToPlayer(track.id, track.soundcloudUrl).then(() => {
-                  fadeInTrack(track.id, track.volume, 2000);
+                  fadeInTrack(track.id, track.volume, crossfadeDurationMs);
                 });
               } else {
-                fadeInTrack(track.id, track.volume, 2000);
+                fadeInTrack(track.id, track.volume, crossfadeDurationMs);
               }
             }
           }
         }, 200);
       }
     },
-    [activeSceneId, activeScene, currentSession, tracks, fadeOutTrack, fadeInTrack, loadTrackToPlayer, setActiveScene],
+    [activeSceneId, activeScene, currentSession, tracks, fadeOutTrack, fadeInTrack, loadTrackToPlayer, setActiveScene, crossfadeDurationMs],
   );
 
   // Keyboard shortcuts
@@ -299,7 +309,7 @@ export function App() {
 
   // Main app
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className={`h-screen flex flex-col overflow-hidden scale-${uiScale}`}>
       {/* Top bar */}
       <header className="h-11 flex items-center justify-between px-4 bg-[var(--color-base-900)] border-b border-[var(--color-base-700)] flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -342,7 +352,16 @@ export function App() {
             Export
           </button>
         </div>
-        <PanicButton onPanic={handlePanic} />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleSettings}
+            className="w-8 h-8 flex items-center justify-center text-[var(--color-base-400)] hover:text-[var(--color-base-100)] hover:bg-[var(--color-base-700)] rounded-sm transition-colors text-sm"
+            title="Settings"
+          >
+            ⚙
+          </button>
+          <PanicButton onPanic={handlePanic} />
+        </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
@@ -368,6 +387,7 @@ export function App() {
                 onStopScene={handleStopScene}
                 onFadeIn={handleFadeInScene}
                 onFadeOut={handleFadeOutScene}
+                fadeDurationMs={fadeDurationMs}
                 onUpdateNotes={(notes) => updateScene(activeScene.id, { notes })}
               />
 
@@ -426,6 +446,16 @@ export function App() {
         open={showAddTrack}
         onClose={() => setShowAddTrack(false)}
         onConfirm={handleAddTrack}
+      />
+      <SettingsPanel
+        open={showSettings}
+        onClose={toggleSettings}
+        uiScale={uiScale}
+        fadeDurationMs={fadeDurationMs}
+        crossfadeDurationMs={crossfadeDurationMs}
+        onScaleChange={setUiScale}
+        onFadeDurationChange={setFadeDuration}
+        onCrossfadeDurationChange={setCrossfadeDuration}
       />
     </div>
   );
