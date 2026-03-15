@@ -26,6 +26,18 @@
   **Context:** `@electron-forge/core-utils` scans `devDependencies` to find the Electron package for version detection. If Electron is in `dependencies`, Forge errors with "Could not find any Electron packages in devDependencies".
   **Fix:** Always `pnpm add -D electron`.
 
+- **[TOP 5]** Forge Vite plugin expects `index.html` at project root, not in `src/`
+  **Context:** The `@electron-forge/plugin-vite` renderer serves `index.html` from the project root by default. Placing it in `src/ui/` results in an empty HTML page loading in the Electron window (blank screen, no errors).
+  **Fix:** Keep `index.html` at project root with `<script src="./src/ui/index.tsx">`.
+
+- **Linux: `chrome-sandbox` must be SUID root for Electron sandbox**
+  **Context:** On Linux, Electron's renderer sandbox requires the `chrome-sandbox` binary to be owned by root with SUID bit set. Without it, shared memory access fails with `ESRCH` errors and the renderer crashes. Zorin OS 17 / Ubuntu Jammy confirmed affected.
+  **Fix:** `sudo chown root:root node_modules/electron/dist/chrome-sandbox && sudo chmod 4755 node_modules/electron/dist/chrome-sandbox`. Must be re-run after `pnpm install`.
+
+- **Linux Haswell GPU: disable hardware acceleration**
+  **Context:** Older Intel Haswell GPUs with outdated VAAPI drivers cause GPU process crashes in Electron. The app needs `app.disableHardwareAcceleration()` and `--disable-gpu` flag in main process.
+  **Fix:** Call `app.disableHardwareAcceleration()` and `app.commandLine.appendSwitch('disable-gpu')` before window creation.
+
 ### Language / Runtime
 <!-- Surprising behavior, footguns in the primary language -->
 

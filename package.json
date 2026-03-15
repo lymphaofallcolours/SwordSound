@@ -6,7 +6,7 @@
   "author": "lymphaofallcolours",
   "license": "MIT",
   "scripts": {
-    "dev": "electron-forge start",
+    "dev": "ELECTRON_DISABLE_SANDBOX=1 electron-forge start",
     "build": "electron-forge make",
     "package": "electron-forge package",
     "test": "vitest",
@@ -44,7 +44,7 @@
     "@typescript-eslint/eslint-plugin": "^8.57.0",
     "@typescript-eslint/parser": "^8.57.0",
     "@vitejs/plugin-react": "^6.0.1",
-    "electron": "^41.0.2",
+    "electron": "^28.3.3",
     "eslint": "^10.0.3",
     "eslint-config-prettier": "^10.1.8",
     "jsdom": "^29.0.0",

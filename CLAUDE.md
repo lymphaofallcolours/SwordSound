@@ -71,10 +71,11 @@ Vitest for unit/integration. Playwright for E2E. Target: ≤5 min Red-Green-Refa
 > Testing patterns → `docs/testing.md`
 
 ## Gotchas (Top 5 — full list in `docs/gotchas.md`)
+- **[TOP 5]** Forge Vite plugin expects `index.html` at project root, not in `src/` — blank screen if misplaced
 - **[TOP 5]** SoundCloud Widget API loop precision overshoot (~100-250ms) due to event frequency
 - **[TOP 5]** Volume changes are integer steps (0-100) across iframe boundary — crossfades are smooth enough for background music but not studio-grade
 - **[TOP 5]** Each track = one SoundCloud iframe = one browser context — performance degrades with many simultaneous tracks
-- **[TOP 5]** Not all SoundCloud tracks are available for embedded playback — must handle gracefully
+- **[TOP 5]** Linux: `chrome-sandbox` must be SUID root after `pnpm install` — renderer crashes otherwise
 
 ## Autonomous Workflow — MANDATORY, Unprompted
 
