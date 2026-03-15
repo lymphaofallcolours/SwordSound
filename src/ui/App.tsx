@@ -303,13 +303,44 @@ export function App() {
       {/* Top bar */}
       <header className="h-11 flex items-center justify-between px-4 bg-[var(--color-base-900)] border-b border-[var(--color-base-700)] flex-shrink-0">
         <div className="flex items-center gap-3">
-          <span className="font-[var(--font-display)] text-xs font-bold tracking-tight text-[var(--color-accent)]">
+          <button
+            onClick={() => {
+              saveCurrentSession();
+              setActiveScene(null);
+              useSessionStore.getState?.();
+              window.location.reload();
+            }}
+            className="text-xs font-bold tracking-tight text-[var(--color-accent)] hover:text-[var(--color-base-100)] transition-colors"
+            title="Back to session list"
+          >
             SwordSound
-          </span>
+          </button>
           <div className="w-px h-4 bg-[var(--color-base-700)]" />
           <span className="text-xs text-[var(--color-base-400)]">
             {currentSession.name}
           </span>
+          <button
+            onClick={async () => {
+              if (!window.swordsound?.dialog) return;
+              const { exportSession } = await import('@application/session/session-use-cases');
+              const json = exportSession(currentSession);
+              const filePath = await window.swordsound.dialog.showSave(currentSession.name);
+              if (filePath) {
+                // Write via a simple IPC call — reuse saveSession with a temp approach
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${currentSession.name}.swordsound.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }
+            }}
+            className="text-[10px] text-[var(--color-base-500)] hover:text-[var(--color-base-300)] transition-colors"
+            title="Export session"
+          >
+            Export
+          </button>
         </div>
         <PanicButton onPanic={handlePanic} />
       </header>
