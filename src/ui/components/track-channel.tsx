@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 import type { Track } from '@domain/models/track';
 import type { TrackPlaybackInfo } from '@ui/stores/playback-store';
@@ -58,7 +58,7 @@ export function TrackChannel({
 }: TrackChannelProps) {
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [hoverInfo, setHoverInfo] = useState<{ time: string; pct: number } | null>(null);
-  const [sliderActive, setSliderActive] = useState(false);
+  const sliderActiveRef = useRef(false);
   const state = playbackInfo?.state ?? 'stopped';
   const isPlaying = state === 'playing';
   const isLoading = state === 'loading';
@@ -92,8 +92,11 @@ export function TrackChannel({
 
   return (
     <div
-      draggable={!!onDragStart && !contextMenuPos && !sliderActive}
-      onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setContextMenuPos(null); onDragStart?.(); }}
+      draggable={!!onDragStart && !contextMenuPos}
+      onDragStart={(e) => {
+        if (sliderActiveRef.current) { e.preventDefault(); return; }
+        e.dataTransfer.effectAllowed = 'move'; setContextMenuPos(null); onDragStart?.();
+      }}
       onDragEnd={() => onDragEnd?.()}
       onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; onDragOver?.(e); }}
       onDrop={(e) => { e.preventDefault(); onDrop?.(); }}
@@ -252,9 +255,9 @@ export function TrackChannel({
           max={100}
           value={track.muted ? 0 : track.volume}
           onChange={(e) => onVolumeChange(Number(e.target.value))}
-          onMouseDown={() => setSliderActive(true)}
-          onMouseUp={() => setSliderActive(false)}
-          onMouseLeave={() => setSliderActive(false)}
+          onMouseDown={(e) => { sliderActiveRef.current = true; e.stopPropagation(); }}
+          onMouseUp={() => { sliderActiveRef.current = false; }}
+          onMouseLeave={() => { sliderActiveRef.current = false; }}
           draggable={false}
           className="w-16 cursor-pointer"
           title={`Volume: ${track.volume}%`}

@@ -16,6 +16,7 @@ import { CueLoopEditor } from '@ui/components/cue-loop-editor';
 import { createTrack } from '@domain/models/track';
 import type { CueLoop } from '@domain/models/cue-loop';
 import { duckAllExcept, unduckAll } from '@infrastructure/soundcloud/duck-engine';
+import { cancelFade } from '@infrastructure/soundcloud/fade-engine';
 import { copyTrack } from '@application/scene/scene-use-cases';
 import { useUndo } from '@ui/hooks/use-undo';
 
@@ -293,6 +294,7 @@ export function App() {
 
   const handleVolumeChange = useCallback(
     (sceneId: string, trackId: string, volume: number) => {
+      cancelFade(trackId); // Cancel any active fade that would override manual volume
       updateTrack(sceneId, trackId, { volume });
       setTrackVolume(trackId, volume);
     },
@@ -515,7 +517,8 @@ export function App() {
           if (activeScene) {
             const anyPlaying = activeScene.tracks.some((t) => tracks[t.id]?.state === 'playing');
             if (anyPlaying) {
-              handleStopScene();
+              // Pause all tracks (preserve position, don't reset)
+              for (const t of activeScene.tracks) pauseTrack(t.id);
             } else {
               handlePlayScene();
             }
