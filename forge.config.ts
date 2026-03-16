@@ -1,6 +1,7 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { MakerDeb } from '@electron-forge/maker-deb';
+import { MakerNSIS } from '@felixrieseberg/electron-forge-maker-nsis';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
@@ -14,7 +15,11 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   makers: [
-    new MakerZIP({}, ['darwin', 'win32']),
+    new MakerNSIS({
+      name: 'SwordSound',
+      icon: './Resources/icon.ico',
+    }),
+    new MakerZIP({}, ['darwin']),
     new MakerDeb({
       options: {
         name: 'swordsound',
