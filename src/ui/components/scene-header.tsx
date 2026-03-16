@@ -74,9 +74,9 @@ export function SceneHeader({ scene, onPlayScene, onStopScene, onFadeIn, onFadeO
           {onSaveVolumes && (
             <>
               <div className="w-px h-5 bg-[var(--color-base-700)] mx-1" />
-              <TransportButton onClick={onSaveVolumes} title="Save current volume mix" icon="⇩" />
+              <TransportButton onClick={onSaveVolumes} title="Save current volume mix" icon="◉" />
               {hasVolumePresets && onRestoreVolumes && (
-                <TransportButton onClick={onRestoreVolumes} title="Restore saved volume mix" icon="⇧" />
+                <TransportButton onClick={onRestoreVolumes} title="Restore saved volume mix" icon="↺" />
               )}
             </>
           )}

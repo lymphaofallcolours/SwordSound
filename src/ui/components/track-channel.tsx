@@ -236,8 +236,14 @@ export function TrackChannel({
         </div>
       </div>
 
-      {/* Volume */}
-      <div className="flex items-center gap-1.5 flex-shrink-0">
+      {/* Volume — wrapped to block drag propagation from parent */}
+      <div
+        className="flex items-center gap-1.5 flex-shrink-0"
+        draggable={false}
+        onMouseDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        onDragStart={(e) => { e.stopPropagation(); e.preventDefault(); }}
+      >
         <ScaleButton
           onClick={onMuteToggle}
           title={track.muted ? 'Unmute' : 'Mute'}
@@ -251,8 +257,6 @@ export function TrackChannel({
           max={100}
           value={track.muted ? 0 : track.volume}
           onChange={(e) => onVolumeChange(Number(e.target.value))}
-          onMouseDown={(e) => e.stopPropagation()}
-          onDragStart={(e) => e.stopPropagation()}
           draggable={false}
           className="w-16 cursor-pointer"
           title={`Volume: ${track.volume}%`}
