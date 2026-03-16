@@ -258,6 +258,8 @@ export function createPlaybackStore() {
     breakCueLoop: (trackId) => {
       const broken = breakCueLoopEngine(trackId);
       if (broken >= 0) {
+        // Cancel any in-progress crossfade for the broken cue loop
+        cancelFade(trackId);
         set((prev) => ({
           tracks: {
             ...prev.tracks,
@@ -269,6 +271,7 @@ export function createPlaybackStore() {
           },
         }));
       }
+      return broken;
     },
 
     panic: () => {

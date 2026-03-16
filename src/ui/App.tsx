@@ -162,7 +162,10 @@ export function App() {
           }
 
           // Cue loop crossfade: check if approaching a cue loop boundary with crossfade
-          for (const cl of track.cueLoops) {
+          const brokenIndices = info.brokenCueLoopIndices ?? new Set<number>();
+          for (let clIdx = 0; clIdx < track.cueLoops.length; clIdx++) {
+            if (brokenIndices.has(clIdx)) continue; // Skip broken cue loops
+            const cl = track.cueLoops[clIdx];
             if (!cl.crossfadeEnabled || !cl.crossfadeDuration) continue;
             const clXfadeMs = Math.min(Number(cl.crossfadeDuration) * 1000, (cl.endPosition - cl.startPosition) * 0.4);
             const clKey = `cue-${track.id}-${cl.id}`;
@@ -702,7 +705,17 @@ export function App() {
                     onLoopToggle={() => updateTrack(activeScene.id, track.id, { loopEnabled: !track.loopEnabled })}
                     onRemove={() => handleRemoveTrack(activeScene.id, track.id)}
                     onSeek={(posMs) => seekTrack(track.id, posMs)}
-                    onBreakCueLoop={track.cueLoops.length > 0 ? () => breakCueLoop(track.id) : undefined}
+                    onBreakCueLoop={track.cueLoops.length > 0 ? () => {
+                      breakCueLoop(track.id);
+                      // Clear crossfade state for all cue loops on this track
+                      for (const cl of track.cueLoops) {
+                        crossfadingTracksRef.current.delete(`cue-${track.id}-${cl.id}`);
+                      }
+                      // Restore volume after a tick to ensure cancelFade has taken effect
+                      const vol = track.muted ? 0 : (track.volume as number);
+                      setTimeout(() => setTrackVolume(track.id, vol), 50);
+                      setTimeout(() => setTrackVolume(track.id, vol), 150);
+                    } : undefined}
                     onEditCueLoops={() => setEditingCueLoopsTrackId(track.id)}
                     onCopy={() => setClipboardTrack(copyTrack(activeScene, track.id))}
                     onDuplicate={() => {
