@@ -1,5 +1,4 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
-import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { VitePlugin } from '@electron-forge/plugin-vite';
@@ -15,11 +14,7 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({
-      name: 'SwordSound',
-      setupIcon: './Resources/icon.ico',
-    }),
-    new MakerZIP({}, ['darwin']),
+    new MakerZIP({}, ['darwin', 'win32']),
     new MakerDeb({
       options: {
         name: 'swordsound',
