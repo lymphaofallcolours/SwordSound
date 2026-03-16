@@ -4,10 +4,12 @@ import path from 'node:path';
 import { registerIpcHandlers } from './ipc-handlers';
 
 // Linux compatibility: shared memory, GPU, sandbox
-app.commandLine.appendSwitch('no-sandbox');
-app.commandLine.appendSwitch('disable-dev-shm-usage');
-app.commandLine.appendSwitch('disable-gpu');
-app.disableHardwareAcceleration();
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('no-sandbox');
+  app.commandLine.appendSwitch('disable-dev-shm-usage');
+  app.commandLine.appendSwitch('disable-gpu');
+  app.disableHardwareAcceleration();
+}
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -20,6 +22,7 @@ const createWindow = () => {
     minHeight: 600,
     title: 'SwordSound',
     backgroundColor: '#0f172a',
+    icon: path.join(__dirname, '../../Resources/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

@@ -9,12 +9,27 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    icon: './Resources/icon',
+    name: 'SwordSound',
+    executableName: 'swordsound',
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
+    new MakerSquirrel({
+      name: 'SwordSound',
+      setupIcon: './Resources/icon.ico',
+    }),
     new MakerZIP({}, ['darwin']),
-    new MakerDeb({}),
+    new MakerDeb({
+      options: {
+        name: 'swordsound',
+        productName: 'SwordSound',
+        genericName: 'Soundboard',
+        description: 'Desktop soundboard for tabletop RPG GMs — streams audio from SoundCloud',
+        categories: ['Audio', 'Game'],
+        icon: './Resources/icon.png',
+      },
+    }),
   ],
   plugins: [
     new VitePlugin({
