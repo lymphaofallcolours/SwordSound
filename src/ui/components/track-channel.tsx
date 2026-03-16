@@ -58,6 +58,7 @@ export function TrackChannel({
 }: TrackChannelProps) {
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [hoverInfo, setHoverInfo] = useState<{ time: string; pct: number } | null>(null);
+  const [sliderActive, setSliderActive] = useState(false);
   const state = playbackInfo?.state ?? 'stopped';
   const isPlaying = state === 'playing';
   const isLoading = state === 'loading';
@@ -91,7 +92,7 @@ export function TrackChannel({
 
   return (
     <div
-      draggable={!!onDragStart && !contextMenuPos}
+      draggable={!!onDragStart && !contextMenuPos && !sliderActive}
       onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setContextMenuPos(null); onDragStart?.(); }}
       onDragEnd={() => onDragEnd?.()}
       onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; onDragOver?.(e); }}
@@ -236,14 +237,8 @@ export function TrackChannel({
         </div>
       </div>
 
-      {/* Volume — wrapped to block drag propagation from parent */}
-      <div
-        className="flex items-center gap-1.5 flex-shrink-0"
-        draggable={false}
-        onMouseDown={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
-        onDragStart={(e) => { e.stopPropagation(); e.preventDefault(); }}
-      >
+      {/* Volume */}
+      <div className="flex items-center gap-1.5 flex-shrink-0">
         <ScaleButton
           onClick={onMuteToggle}
           title={track.muted ? 'Unmute' : 'Mute'}
@@ -257,6 +252,9 @@ export function TrackChannel({
           max={100}
           value={track.muted ? 0 : track.volume}
           onChange={(e) => onVolumeChange(Number(e.target.value))}
+          onMouseDown={() => setSliderActive(true)}
+          onMouseUp={() => setSliderActive(false)}
+          onMouseLeave={() => setSliderActive(false)}
           draggable={false}
           className="w-16 cursor-pointer"
           title={`Volume: ${track.volume}%`}
