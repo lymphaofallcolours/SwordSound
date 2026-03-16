@@ -267,17 +267,20 @@ export function App() {
         await loadTrackToPlayer(trackId, soundcloudUrl);
       }
       // Restore configured volume, initialize cue loops, seek to custom start
+      const isResuming = tracks[trackId]?.state === 'paused';
       if (currentSession) {
         for (const scene of currentSession.scenes) {
           const track = scene.tracks.find((t) => t.id === trackId);
           if (track) {
             setTrackVolume(trackId, track.muted ? 0 : track.volume);
-            if (track.cueLoops.length > 0) {
-              setCueLoops(trackId, track.cueLoops);
-            }
-            // Seek to custom start point if set
-            if (track.customStart > 0) {
-              seekTrack(trackId, track.customStart);
+            // Only initialize cue loops and seek on fresh play, not resume
+            if (!isResuming) {
+              if (track.cueLoops.length > 0) {
+                setCueLoops(trackId, track.cueLoops);
+              }
+              if (track.customStart > 0) {
+                seekTrack(trackId, track.customStart);
+              }
             }
             // Fade in on play if enabled
             if (track.fadeInOnPlay) {
