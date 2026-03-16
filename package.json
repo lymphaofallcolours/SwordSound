@@ -1,6 +1,6 @@
 {
   "name": "swordsound",
-  "version": "0.2.1",
+  "version": "1.0.0",
   "description": "Desktop soundboard for tabletop RPG GMs — streams audio from SoundCloud via the Widget API",
   "main": ".vite/build/index.js",
   "author": "lymphaofallcolours",

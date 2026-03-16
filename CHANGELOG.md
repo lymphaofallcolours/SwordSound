@@ -5,6 +5,23 @@ Format follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.0.0] — 2026-03-16
+
+First stable release.
+
+### Changes since 0.2.0
+- **fix:** Space key now pauses (preserves position) instead of stopping
+- **fix:** Volume slider no longer triggers track drag or stutters
+- **fix:** Manual volume changes cancel active fades
+- **fix:** Volume save/restore icons (◉/↺) match transport style
+- **chore:** App icon for all platforms (PNG, ICO, ICNS)
+- **chore:** Electron Forge packaging config for Linux, Windows, macOS
+- **chore:** GitHub Actions CI — auto-build on tag push, create releases
+- **chore:** Linux GPU flags now conditional (only on Linux)
+- **chore:** Enhanced Add Track dialog with label, group, quick toggles
+
+---
+
 ## [0.2.0] — 2026-03-15
 
 Feature-complete pre-release. All core spec features implemented.
